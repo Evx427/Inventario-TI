@@ -13,16 +13,18 @@ export async function generarPlanillasPDF(solicitudes) {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(14)
   doc.setTextColor(0, 0, 0)
-  doc.text('FORMATO DE CONTROL Y SOLICITUD DE EQUIPOS TECNOLÓGICOS', anchoPagina / 2, yTitulo, { align: 'center' })
+  doc.text('FORMATO DE CONTROL Y SOLICITUD DE EQUIPOS TECNOLÓGICOS DE LA UPTMA. EXT VILLA DEL ROSARIO ', anchoPagina / 2, yTitulo, { align: 'center' })
 
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
   doc.text('Fecha de Emisión: ' + new Date().toLocaleDateString('es-ES'), anchoPagina - 15, yTitulo + 8, { align: 'right' })
 
   // --- 3. CONSTRUIR LOS DATOS DE LA TABLA ---
+
   const filas = solicitudes.map((s) => {
-    const fSol = new Date(s.fecha_solicitud)
-    const fEnt = s.fecha_entrega ? new Date(s.fecha_entrega) : null
+   
+const fSol = new Date(s.fecha_solicitud)
+const fDev = s.fecha_devolucion ? new Date(s.fecha_devolucion) : null 
     
     const formatFechaHora = (date) => {
       if (!date) return '—'
@@ -46,14 +48,15 @@ export async function generarPlanillasPDF(solicitudes) {
       s.equipos?.codigo_bien_publico || '—',
       accesorios.join(', ') || 'Ninguno',
       formatFechaHora(fSol),
-      formatFechaHora(fEnt),
+      formatFechaHora(fDev),
       s.estado.toUpperCase()
     ]
   })
 
   // --- 4. DIBUJAR LA TABLA ---
+
   autoTable(doc, {
-    startY: yTitulo + 15, // Bajamos la tabla para que quede debajo del título
+    startY: yTitulo + 15, 
     head: [[
       'Nombre del Solicitante', 
       'Cédula', 

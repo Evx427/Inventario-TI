@@ -34,7 +34,7 @@ function getFormVacio() {
     con_cable_vga: false,
     con_caja: true,
     con_alimentador: true,
-    fecha_entrega: '',
+    fecha_solicitud: '',
     observaciones: '',
   }
 }
@@ -70,25 +70,28 @@ async function onGuardar() {
     return
   }
 
+  if (!form.value.fecha_solicitud) {
+    toast.advertencia('Debes seleccionar la fecha de solicitud.')
+    return
+  }
+
   guardando.value = true
   const res = await crear({
     ...form.value,
-    fecha_entrega: form.value.fecha_entrega ? new Date(form.value.fecha_entrega).toISOString() : null,
+    fecha_solicitud: form.value.fecha_solicitud ? new Date(form.value.fecha_solicitud).toISOString() : null,
+    fecha_entrega: null, 
   })
   guardando.value = false
-
-  if (res.ok) {
-    modalAbierto.value = false
-    toast.exito('Solicitud registrada correctamente')
-    await refrescar()
-  } else {
-    toast.error(res.error)
-  }
+  
 }
 
 function abrirDevolucion(solicitud) {
   solicitudSeleccionada.value = solicitud
-  formDevolucion.value = { observaciones: '', conNovedad: false, fecha_devolucion: '' }
+  formDevolucion.value = { 
+    observaciones: '', 
+    conNovedad: false, 
+    fecha_devolucion: '' 
+  }
   modalDevolucionAbierto.value = true
 }
 
@@ -123,18 +126,19 @@ function formatearFecha(fechaISO) {
   })
 }
 
-async function generarPlanillasDelDia() { 
-  const solicitudesActivas = solicitudes.value.filter(s => s.estado === 'prestado')
+async function generarPlanillasDelDia() {
+  
+  // Toma todas las solicitudes en el reporte
+  const solicitudesParaPlanilla = solicitudes.value
 
-  if (solicitudesActivas.length === 0) {
-    toast.advertencia('No hay solicitudes activas (prestadas) para generar planillas.')
+
+  if (solicitudesParaPlanilla.length === 0) {
+    toast.advertencia('No hay solicitudes en la lista para generar planillas.')
     return
   }
 
-  // Se generaS el PDF con la imagen
-  await generarPlanillasPDF(solicitudesActivas)
-  
-  toast.exito(`Se generó el reporte con ${solicitudesActivas.length} solicitudes.`)
+  await generarPlanillasPDF(solicitudesParaPlanilla)
+  toast.exito(`Se generó el reporte con ${solicitudesParaPlanilla.length} solicitudes.`)
 }
 
 const maxSemana = computed(() => Math.max(...estadisticas.value.porSemana.map(s => s.valor), 1))
@@ -366,15 +370,20 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-bold text-slate-700 mb-1">Fecha y hora de entrega</label>
-            <input v-model="form.fecha_entrega" type="datetime-local" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-slate-700 mb-1">Observaciones</label>
-            <input v-model="form.observaciones" placeholder="Opcional" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          </div>
-        </div>
+        <div>
+        <label class="block text-sm font-bold text-slate-700 mb-1">Fecha de Solicitud *</label>
+       <input 
+        v-model="form.fecha_solicitud" 
+        type="datetime-local" 
+        required 
+        class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" 
+        />
+      </div>
+      <div>
+      <label class="block text-sm font-bold text-slate-700 mb-1">Observaciones</label>
+      <input v-model="form.observaciones" placeholder="Opcional" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+      </div>
+      </div>
 
         <div class="flex justify-end gap-3 pt-2">
           <BaseButton variant="cancel" @click="modalAbierto = false">Cancelar</BaseButton>

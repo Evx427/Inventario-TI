@@ -26,7 +26,7 @@ const menuCompleto = [
   { to: '/categorias', label: 'Categorías', icon: '📁', roles: ['SuperUsuario', 'Usuario',] },
   { to: '/solicitudes', label: 'Solicitudes', icon: '📋', roles: ['SuperUsuario', 'Usuario', ] },
   { to: '/control-mac', label: 'Control MAC', icon: '📡', roles: ['SuperUsuario', 'Usuario', ] },
-  { to: '/consultas', label: 'Consultas', icon: '❓', roles: ['SuperUsuario', 'Visor', 'Usuario'] },
+  { to: '/consultas', label: 'Consultas', icon: '❓', roles: ['SuperUsuario', 'Visor',] },
   { to: '/reportes', label: 'Reportes', icon: '📊', roles: ['SuperUsuario', 'Usuario', 'Visor'] },
   { to: '/auditoria', label: 'Auditoría', icon: '🔍', roles: ['SuperUsuario'] }, 
   { to: '/usuarios', label: 'Adm. Usuarios', icon: '👥', roles: ['SuperUsuario'] }, 
