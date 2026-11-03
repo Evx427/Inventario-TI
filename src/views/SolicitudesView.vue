@@ -79,7 +79,6 @@ async function onGuardar() {
   const res = await crear({
     ...form.value,
     fecha_solicitud: form.value.fecha_solicitud ? new Date(form.value.fecha_solicitud).toISOString() : null,
-    fecha_entrega: null, 
   })
   guardando.value = false
   
@@ -239,7 +238,7 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
             <th class="px-4 py-4">Equipo</th>
             <th class="px-4 py-4">Solicitante</th>
             <th class="px-4 py-4">F. Solicitud</th>
-            <th class="px-4 py-4">F. Entrega</th>
+            <th class="px-4 py-4">F. Devolucion</th>
             <th class="px-4 py-4">Estado</th>
             <th class="px-4 py-4 text-right">Acciones</th>
           </tr>
@@ -257,7 +256,7 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
               <p v-if="s.pnf" class="text-xs text-slate-400">{{ s.pnf }}</p>
             </td>
             <td class="px-4 py-3 text-xs text-slate-600">{{ formatearFecha(s.fecha_solicitud) }}</td>
-            <td class="px-4 py-3 text-xs text-slate-600">{{ formatearFecha(s.fecha_entrega) }}</td>
+            <td class="px-4 py-3 text-xs text-slate-600">{{ formatearFecha(s.fecha_devolucion) }}</td>
             <td class="px-4 py-3">
               <span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase border"
                 :class="{
