@@ -81,8 +81,16 @@ async function onGuardar() {
     fecha_solicitud: form.value.fecha_solicitud ? new Date(form.value.fecha_solicitud).toISOString() : null,
   })
   guardando.value = false
-  
+
+   if (res.ok) {
+    modalAbierto.value = false
+    toast.exito('Solicitud registrada correctamente')
+    await refrescar() // <-- Recarga la lista
+  } else {
+    toast.error(res.error)
+  }
 }
+  
 
 function abrirDevolucion(solicitud) {
   solicitudSeleccionada.value = solicitud
