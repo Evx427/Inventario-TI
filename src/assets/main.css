@@ -1,1 +1,12 @@
 @import "tailwindcss";
+
+/* Estilos globales para hacer las tablas responsivas en móviles */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* Suaviza el deslizamiento en iOS */
+}
+
+.table-responsive table {
+  min-width: 800px; /* Fuerza un ancho mínimo para que no se aplasten las columnas */
+}

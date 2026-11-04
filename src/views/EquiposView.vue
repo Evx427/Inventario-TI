@@ -120,30 +120,30 @@ const puedeEliminar = computed(() => auth.isSuperUsuario)
 <template>
   <div>
     <!-- Encabezado -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
       <div>
         <h1 class="text-2xl font-bold text-slate-800">Equipos</h1>
         <p class="text-sm text-slate-500 mt-1">Gestión de los equipos del inventario.</p>
       </div>
-      <BaseButton v-if="auth.puedeEscribir" variant="primary" @click="abrirCrear">
-        Registrar equipo
+      <BaseButton v-if="auth.puedeEscribir" variant="primary" @click="abrirCrear" class="w-full sm:w-auto">
+        + Nuevo equipo
       </BaseButton>
     </div>
 
     <!-- Filtros -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
-      <input v-model="filtros.busqueda" placeholder="Buscar por código, marca, modelo..." class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition" @input="aplicarFiltros" />
-      <select v-model="filtros.categoria_id" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition" @change="aplicarFiltros">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <input v-model="filtros.busqueda" placeholder="Buscar..." class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" @input="aplicarFiltros" />
+      <select v-model="filtros.categoria_id" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" @change="aplicarFiltros">
         <option value="">Todas las categorías</option>
         <option v-for="c in categorias" :key="c.id" :value="c.id">{{ c.nombre }}</option>
       </select>
-      <select v-model="filtros.estado" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition" @change="aplicarFiltros">
+      <select v-model="filtros.estado" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" @change="aplicarFiltros">
         <option value="">Todos los estados</option>
         <option value="activo">Activo</option>
         <option value="reparacion">En reparación</option>
         <option value="baja">De baja</option>
       </select>
-      <BaseButton variant="cancel" @click="filtros = { busqueda: '', categoria_id: '', estado: '' }; aplicarFiltros()">
+      <BaseButton variant="cancel" @click="filtros = { busqueda: '', categoria_id: '', estado: '' }; aplicarFiltros()" class="w-full">
         Limpiar filtros
       </BaseButton>
     </div>
@@ -152,49 +152,52 @@ const puedeEliminar = computed(() => auth.isSuperUsuario)
     <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
       <div v-if="cargando" class="p-8 text-center text-slate-500 animate-pulse">Cargando equipos...</div>
 
-      <table v-else-if="equipos.length > 0" class="w-full text-sm">
-        <thead class="bg-slate-50 text-slate-500 text-left text-xs uppercase font-bold">
-          <tr>
-            <th class="px-4 py-4">Código público</th>
-            <th class="px-4 py-4">Categoría</th>
-            <th class="px-4 py-4">Marca / Modelo</th>
-            <th class="px-4 py-4">Estado</th>
-            <th class="px-4 py-4 text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr v-for="eq in equipos" :key="eq.codigo_bien_publico" class="hover:bg-blue-50/30 transition-colors">
-            <td class="px-4 py-3 font-mono text-xs font-semibold text-slate-500">{{ eq.codigo_bien_publico }}</td>
-            <td class="px-4 py-3 text-slate-600 font-medium">{{ eq.categorias?.nombre || '—' }}</td>
-            <td class="px-4 py-3 text-slate-700 font-medium">
-              {{ [eq.marca, eq.modelo].filter(Boolean).join(' / ') || '—' }}
-            </td>
-            <td class="px-4 py-3">
-              <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border"
-                :class="{
-                  'bg-emerald-50 text-emerald-600 border-emerald-200': eq.estado === 'activo',
-                  'bg-amber-50 text-amber-600 border-amber-200': eq.estado === 'reparacion',
-                  'bg-rose-50 text-rose-600 border-rose-200': eq.estado === 'baja',
-                }">
-                {{ eq.estado }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-right">
-              <div class="inline-flex gap-1.5">
-                <BaseButton size="sm" variant="ghost" @click="abrirDetalle(eq.codigo_bien_publico)">
-                  Ver
-                </BaseButton>
-                <BaseButton v-if="auth.puedeEscribir" size="sm" variant="secondary" @click="abrirEditar(eq.codigo_bien_publico)">
-                  Editar
-                </BaseButton>
-                <BaseButton v-if="puedeEliminar" size="sm" variant="danger" @click="pedirConfirmacionEliminar(eq)">
-                  Eliminar
-                </BaseButton>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- Contenedor responsivo de la tabla -->
+      <div v-else-if="equipos.length > 0" class="overflow-x-auto w-full">
+        <table class="w-full text-sm min-w-[800px]">
+          <thead class="bg-slate-50 text-slate-500 text-left text-xs uppercase font-bold">
+            <tr>
+              <th class="px-4 py-4">Código público</th>
+              <th class="px-4 py-4">Categoría</th>
+              <th class="px-4 py-4">Marca / Modelo</th>
+              <th class="px-4 py-4">Estado</th>
+              <th class="px-4 py-4 text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            <tr v-for="eq in equipos" :key="eq.codigo_bien_publico" class="hover:bg-blue-50/30 transition-colors">
+              <td class="px-4 py-3 font-mono text-xs font-semibold text-slate-500">{{ eq.codigo_bien_publico }}</td>
+              <td class="px-4 py-3 text-slate-600 font-medium">{{ eq.categorias?.nombre || '—' }}</td>
+              <td class="px-4 py-3 text-slate-700 font-medium">
+                {{ [eq.marca, eq.modelo].filter(Boolean).join(' / ') || '—' }}
+              </td>
+              <td class="px-4 py-3">
+                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border"
+                  :class="{
+                    'bg-emerald-50 text-emerald-600 border-emerald-200': eq.estado === 'activo',
+                    'bg-amber-50 text-amber-600 border-amber-200': eq.estado === 'reparacion',
+                    'bg-rose-50 text-rose-600 border-rose-200': eq.estado === 'baja',
+                  }">
+                  {{ eq.estado }}
+                </span>
+              </td>
+              <td class="px-4 py-3 text-right">
+                <div class="inline-flex gap-1.5">
+                  <BaseButton size="sm" variant="ghost" @click="abrirDetalle(eq.codigo_bien_publico)">
+                    Ver
+                  </BaseButton>
+                  <BaseButton v-if="auth.puedeEscribir" size="sm" variant="secondary" @click="abrirEditar(eq.codigo_bien_publico)">
+                    Editar
+                  </BaseButton>
+                  <BaseButton v-if="puedeEliminar" size="sm" variant="danger" @click="pedirConfirmacionEliminar(eq)">
+                    Eliminar
+                  </BaseButton>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <div v-else class="p-8 text-center text-slate-500">No hay equipos registrados.</div>
 
@@ -207,27 +210,9 @@ const puedeEliminar = computed(() => auth.isSuperUsuario)
           de <span class="font-bold text-slate-700">{{ totalEquipos }}</span> equipos
         </p>
         <div class="flex items-center gap-2">
-          <button
-            :disabled="paginaActual === 1"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border"
-            :class="paginaActual === 1 ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
-            @click="cambiarPagina(paginaActual - 1)"
-          >
-            Anterior
-          </button>
-          
-          <span class="text-xs font-bold text-slate-700 px-2">
-            Página {{ paginaActual }} de {{ totalPaginas }}
-          </span>
-
-          <button
-            :disabled="paginaActual === totalPaginas"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border"
-            :class="paginaActual === totalPaginas ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
-            @click="cambiarPagina(paginaActual + 1)"
-          >
-            Siguiente
-          </button>
+          <button :disabled="paginaActual === 1" class="px-3 py-1.5 rounded-lg text-xs font-bold border" :class="paginaActual === 1 ? 'bg-slate-100 text-slate-400' : 'bg-white text-slate-700 hover:bg-slate-50'" @click="cambiarPagina(paginaActual - 1)">Anterior</button>
+          <span class="text-xs font-bold text-slate-700 px-2">Página {{ paginaActual }} de {{ totalPaginas }}</span>
+          <button :disabled="paginaActual === totalPaginas" class="px-3 py-1.5 rounded-lg text-xs font-bold border" :class="paginaActual === totalPaginas ? 'bg-slate-100 text-slate-400' : 'bg-white text-slate-700 hover:bg-slate-50'" @click="cambiarPagina(paginaActual + 1)">Siguiente</button>
         </div>
       </div>
     </div>
@@ -250,7 +235,7 @@ const puedeEliminar = computed(() => auth.isSuperUsuario)
     <ConfirmModal
       :open="modalConfirmAbierto"
       title="¡Cuidado colega!"
-      :message="`¿Estás seguro de eliminar el equipo ${equipoAEliminar?.codigo_bien_publico}? Esta acción no se puede deshacer y se perderán todos los componentes de hardware.`"
+      :message="`¿Estás seguro de eliminar el equipo ${equipoAEliminar?.codigo_bien_publico}? Esta acción no se puede deshacer y se perderán todos sus componentes de hardware.`"
       confirm-text="Sí, eliminar equipo"
       @confirm="ejecutarEliminar"
       @cancel="modalConfirmAbierto = false; equipoAEliminar = null"
