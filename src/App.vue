@@ -6,18 +6,15 @@ import { useNotificacionesStore } from './stores/notificaciones'
 import ToastContainer from './components/ui/ToastContainer.vue'
 import PreLoader from './components/ui/PreLoader.vue'
 
-
-
 const route = useRoute()
 const router = useRouter()
 const auth = useAuth()
 const toast = useNotificacionesStore()
+
+// Estado para el menú móvil
 const menuAbierto = ref(false)
 
 const mostrarConfirmacionSalir = ref(false)
-
-
-
 
 // Menú con roles permitidos
 const menuCompleto = [
@@ -26,16 +23,15 @@ const menuCompleto = [
   { to: '/categorias', label: 'Categorías', icon: '📁', roles: ['SuperUsuario', 'Usuario',] },
   { to: '/solicitudes', label: 'Solicitudes', icon: '📋', roles: ['SuperUsuario', 'Usuario', ] },
   { to: '/control-mac', label: 'Control MAC', icon: '📡', roles: ['SuperUsuario', 'Usuario', ] },
-  { to: '/consultas', label: 'Consultas', icon: '❓', roles: ['SuperUsuario', 'Visor',] },
+  { to: '/consultas', label: 'Consultas', icon: '❓', roles: ['SuperUsuario', 'Visor'] },
   { to: '/reportes', label: 'Reportes', icon: '📊', roles: ['SuperUsuario', 'Usuario', 'Visor'] },
   { to: '/auditoria', label: 'Auditoría', icon: '🔍', roles: ['SuperUsuario'] }, 
   { to: '/usuarios', label: 'Adm. Usuarios', icon: '👥', roles: ['SuperUsuario'] }, 
 ]
 
-// Menú filtrado por rol (reactivo)
 const menu = computed(() => {
   const rolActual = auth.rol
-  if (!rolActual) return [] // Si aún no cargó el rol, no muestra nada
+  if (!rolActual) return []
   return menuCompleto.filter(item => item.roles.includes(rolActual))
 })
 
@@ -50,7 +46,7 @@ async function confirmarCerrarSesion() {
   router.push('/login')
 }
 
-// Función para cerrar el menú al hacer clic en un enlace
+// Función para cerrar el menú al hacer clic en un enlace (móvil)
 function cerrarMenu() {
   menuAbierto.value = false
 }
@@ -67,14 +63,23 @@ const esRutaAuth = computed(() =>
   <RouterView v-if="esRutaAuth" />
 
   <!-- Fondo general -->
-  <div v-else class="min-h-screen bg-blue-50/50 flex text-slate-800 font-sans">
+  <div v-else class="min-h-screen bg-blue-50/50 flex text-slate-800 font-sans overflow-x-hidden">
     
-    <!-- SIDEBAR: Morado semi-transparente -->
-    <aside class="w-64 bg-violet-100/60 backdrop-blur-md border-r border-violet-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col fixed h-full z-10">
+    <!-- Fondo oscuro para móviles cuando el menú está abierto -->
+    <div 
+      v-if="menuAbierto" 
+      class="fixed inset-0 bg-slate-900/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
+      @click="menuAbierto = false"
+    ></div>
+
+    <!-- SIDEBAR -->
+    <aside 
+      class="w-64 bg-violet-100/60 backdrop-blur-md border-r border-violet-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col fixed h-full z-50 transition-transform duration-300 ease-in-out lg:translate-x-0"
+      :class="menuAbierto ? 'translate-x-0' : '-translate-x-full'"
+    >
       
       <!-- Cabecera del Sidebar -->
       <div class="h-20 flex items-center gap-3 px-6 border-b border-violet-200/50">
-        <!-- Logo circular -->
         <img src="/logito.png" alt="Logo Inventario TI" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm shrink-0" />
         <h1 class="text-xl font-bold text-slate-800 tracking-tight">Inventario TI</h1>
       </div>
@@ -85,6 +90,7 @@ const esRutaAuth = computed(() =>
           v-for="item in menu"
           :key="item.to"
           :to="item.to"
+          @click="cerrarMenu"
           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
           :class="isActive(item.to)
             ? 'bg-violet-600 text-white shadow-sm shadow-violet-500/30' 
@@ -105,33 +111,50 @@ const esRutaAuth = computed(() =>
             <p class="text-sm font-bold text-slate-800 truncate">
               {{ auth.perfil?.nombre_completo || auth.user?.email || 'Usuario' }}
             </p>
-            <!-- Rol en color morado -->
             <p class="text-xs text-violet-600 font-semibold truncate uppercase tracking-wider">
               {{ auth.rol || 'Cargando...' }}
             </p>
           </div>
         </div>
-        <!-- Botón de Salir -->
         <button
           class="w-full text-xs bg-white/80 border border-rose-200 hover:bg-rose-50 text-rose-500 py-2.5 rounded-xl transition-all font-bold flex justify-center items-center gap-2"
           @click="mostrarConfirmacionSalir = true"
         >
-          <span></span> Cerrar Sesión
+          <span>🚪</span> Cerrar Sesión
         </button>
       </div>
     </aside>
 
     <!-- CONTENIDO PRINCIPAL -->
-    <main class="flex-1 ml-64 flex flex-col min-h-screen">
-      <!-- Header superior -->
-      <header class="h-16 bg-white/40 backdrop-blur-sm border-b border-white flex items-center px-8">
-        <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest">
-          {{ menu.find(m => m.to === route.path)?.label || 'Sistema' }}
-        </h2>
+    <main class="flex-1 lg:ml-64 flex flex-col min-h-screen w-full transition-all duration-300">
+      
+      <!-- Header superior con botón hamburguesa -->
+      <header class="h-16 bg-white/40 backdrop-blur-sm border-b border-white flex items-center justify-between px-4 lg:px-8">
+        <div class="flex items-center gap-3">
+          <!-- Botón de menú hamburguesa (solo móvil) -->
+          <button 
+            @click="menuAbierto = true"
+            class="lg:hidden p-2 text-slate-600 hover:bg-slate-200/50 rounded-lg transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+
+          <!-- Título de la vista actual -->
+          <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest hidden sm:block">
+            {{ menu.find(m => m.to === route.path)?.label || 'Sistema' }}
+          </h2>
+        </div>
+
+        <!-- Nombre del usuario en móvil -->
+        <div class="lg:hidden text-sm font-bold text-slate-700">
+          {{ auth.perfil?.nombre_completo?.split(' ')[0] || 'Usuario' }}
+        </div>
       </header>
 
-      <!-- Vistas -->
-      <div class="flex-1 p-8">
+      <!-- Vistas (padding responsivo) -->
+      <div class="flex-1 p-4 lg:p-8">
         <RouterView />
       </div>
 
@@ -145,7 +168,7 @@ const esRutaAuth = computed(() =>
     <Teleport to="body">
       <div
         v-if="mostrarConfirmacionSalir"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm"
         @click.self="mostrarConfirmacionSalir = false"
       >
         <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl text-center border border-slate-100">
