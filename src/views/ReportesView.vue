@@ -66,40 +66,50 @@ const conteoPorCategoria = computed(() => {
   return Object.entries(conteo).sort((a, b) => b[1] - a[1])
 })
 
-// Función para convertir el hardware en un texto legible
-function formatearHardware(hardware) {
-  if (!hardware || hardware.length === 0) return 'Sin hardware registrado'
+// Función para extraer el hardware y separarlo por columnas
+function extraerHardware(hardware) {
+  const datos = {
+    placa: '—',
+    procesador: '—',
+    ram: '—',
+    almacenamiento: '—',
+    gpu: '—',
+    red: '—'
+  }
 
-  const partes = []
+  if (!hardware || hardware.length === 0) return datos
+
+  // Placa Base
+  const placa = hardware.find(h => h.tipo === 'placa_base')
+  if (placa) datos.placa = `${placa.marca || ''} ${placa.modelo || ''}`.trim()
 
   // Procesador
   const cpu = hardware.find(h => h.tipo === 'procesador')
-  if (cpu) partes.push(`CPU: ${cpu.marca || ''} ${cpu.modelo || ''}`.trim())
+  if (cpu) datos.procesador = `${cpu.marca || ''} ${cpu.modelo || ''}`.trim()
 
   // RAM
   const rams = hardware.filter(h => h.tipo === 'ram')
   if (rams.length > 0) {
     const totalModulos = rams.reduce((acc, r) => acc + (r.cantidad_modulos || 0), 0)
     const tipo = rams[0].tipo_ram || ''
-    partes.push(`RAM: ${totalModulos} módulo(s) ${tipo}`.trim())
+    datos.ram = `${totalModulos} módulo(s) ${tipo}`.trim()
   }
 
   // Almacenamiento
   const discos = hardware.filter(h => h.tipo === 'almacenamiento')
   if (discos.length > 0) {
-    const discosTexto = discos.map(d => `${d.tipo_almacenamiento || ''} ${d.capacidad_gb || 0}GB`).join(' + ')
-    partes.push(`Almacenamiento: ${discosTexto}`)
+    datos.almacenamiento = discos.map(d => `${d.tipo_almacenamiento || ''} ${d.capacidad_gb || 0}GB`).join(' + ')
   }
 
   // GPU
   const gpu = hardware.find(h => h.tipo === 'gpu')
-  if (gpu) partes.push(`GPU: ${gpu.marca || ''} ${gpu.modelo || ''}`.trim())
+  if (gpu) datos.gpu = `${gpu.marca || ''} ${gpu.modelo || ''}`.trim()
 
-  // Placa base
-  const placa = hardware.find(h => h.tipo === 'placa_base')
-  if (placa) partes.push(`Placa: ${placa.marca || ''} ${placa.modelo || ''}`.trim())
+  // Tarjeta de Red
+  const red = hardware.find(h => h.tipo === 'red')
+  if (red) datos.red = `${red.marca || ''} ${red.modelo || ''}`.trim()
 
-  return partes.join(' | ')
+  return datos
 }
 
 // --- Exportar CSV ---
@@ -109,22 +119,46 @@ function exportarCSV() {
     return
   }
 
-  // Cabeceras 
-  const headers = ['Código', 'Categoría', 'Marca', 'Modelo', 'Serial', 'F. Registro', 'F. Fabricación', 'Ubicación', 'Estado', 'Hardware']
+  // Cabeceras (Agregamos columnas individuales)
+  const headers = [
+    'Código', 
+    'Categoría', 
+    'Marca', 
+    'Modelo', 
+    'Serial', 
+    'F. Registro', 
+    'F. Fabricación', 
+    'Ubicación', 
+    'Estado',
+    'Placa Base',
+    'Procesador',
+    'Memoria RAM',
+    'Almacenamiento',
+    'Tarjeta Gráfica (GPU)',
+    'Tarjeta de Red'
+  ]
   
-  // Filas 
-  const filas = resultados.value.map(eq => [
-    eq.codigo_bien_publico,
-    eq.categorias?.nombre || '',
-    eq.marca || '',
-    eq.modelo || '',
-    eq.numero_serie || '',         
-    eq.fecha_registro || '',
-    eq.fecha_fabricacion || '',
-    eq.ubicacion || '',
-    eq.estado,
-    formatearHardware(eq.hardware_equipos) 
-  ])
+  // Filas
+  const filas = resultados.value.map(eq => {
+    const hw = extraerHardware(eq.hardware_equipos)
+    return [
+      eq.codigo_bien_publico,
+      eq.categorias?.nombre || '',
+      eq.marca || '',
+      eq.modelo || '',
+      eq.numero_serie || '',
+      eq.fecha_registro || '',
+      eq.fecha_fabricacion || '',
+      eq.ubicacion || '',
+      eq.estado,
+      hw.placa,
+      hw.procesador,
+      hw.ram,
+      hw.almacenamiento,
+      hw.gpu,
+      hw.red
+    ]
+  })
 
   // Unir todo con comas y escapar comillas
   const csvContent = [
@@ -250,40 +284,50 @@ function exportarCSV() {
 
       <div v-else class="overflow-x-auto">
         <table class="w-full text-sm text-left">
-          <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-bold border-b border-slate-100">
-            <tr>
-              <th class="px-4 py-3">Código</th>
-              <th class="px-4 py-3">Categoría</th>
-              <th class="px-4 py-3">Marca / Modelo</th>
-              <th class="px-4 py-3">Especificaciones de Hardware</th>
-              <th class="px-4 py-3">F. Registro</th>
-              <th class="px-4 py-3">F. Fabricación</th>
-              <th class="px-4 py-3">Ubicación</th>
-              <th class="px-4 py-3">Estado</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr v-for="eq in resultados" :key="eq.codigo_bien_publico" class="hover:bg-blue-50/30 transition-colors">
-              <td class="px-4 py-3 font-mono text-xs font-bold text-slate-600">{{ eq.codigo_bien_publico }}</td>
-              <td class="px-4 py-3 text-slate-600">{{ eq.categorias?.nombre }}</td>
-              <td class="px-4 py-3 text-slate-700 font-medium">{{ eq.marca }} {{ eq.modelo }}</td>
-                  <td class="px-4 py-3 text-xs text-slate-600 max-w-xs">{{ formatearHardware(eq.hardware_equipos) }}</td>
-              <td class="px-4 py-3 text-slate-500">{{ eq.fecha_registro || '—' }}</td>
-              <td class="px-4 py-3 text-slate-500">{{ eq.fecha_fabricacion || '—' }}</td>
-              <td class="px-4 py-3 text-slate-600">{{ eq.ubicacion || '—' }}</td>
-              <td class="px-4 py-3">
-                <span class="px-2 py-1 rounded text-[10px] font-bold uppercase border"
-                  :class="{
-                    'bg-emerald-50 text-emerald-600 border-emerald-200': eq.estado === 'activo',
-                    'bg-amber-50 text-amber-600 border-amber-200': eq.estado === 'reparacion',
-                    'bg-rose-50 text-rose-600 border-rose-200': eq.estado === 'baja',
-                  }">
-                  {{ eq.estado }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+  <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-bold border-b border-slate-100">
+    <tr>
+      <th class="px-4 py-3">Código</th>
+      <th class="px-4 py-3">Categoría</th>
+      <th class="px-4 py-3">Marca / Modelo</th>
+      <th class="px-4 py-3">Serial</th>
+      <th class="px-4 py-3">Placa Base</th>
+      <th class="px-4 py-3">Procesador</th>
+      <th class="px-4 py-3">RAM</th>
+      <th class="px-4 py-3">Disco</th>
+      <th class="px-4 py-3">GPU</th>
+      <th class="px-4 py-3">Red</th>
+      <th class="px-4 py-3">Ubicación</th>
+      <th class="px-4 py-3">Estado</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-slate-100"> 
+    <tr v-for="eq in resultados" :key="eq.codigo_bien_publico" class="hover:bg-blue-50/30 transition-colors">
+      <td class="px-4 py-3 font-mono text-xs font-bold text-slate-600">{{ eq.codigo_bien_publico }}</td>
+      <td class="px-4 py-3 text-slate-600">{{ eq.categorias?.nombre }}</td>
+      <td class="px-4 py-3 text-slate-700 font-medium">{{ eq.marca }} {{ eq.modelo }}</td>
+      <td class="px-4 py-3 text-slate-500">{{ eq.numero_serie || '—' }}</td>
+      
+      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).placa }}</td>
+      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).procesador }}</td>
+      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).ram }}</td>
+      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).almacenamiento }}</td>
+      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).gpu }}</td>
+      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).red }}</td>
+      
+      <td class="px-4 py-3 text-slate-600">{{ eq.ubicacion || '—' }}</td>
+      <td class="px-4 py-3">
+        <span class="px-2 py-1 rounded text-[10px] font-bold uppercase border"
+          :class="{
+            'bg-emerald-50 text-emerald-600 border-emerald-200': eq.estado === 'activo',
+            'bg-amber-50 text-amber-600 border-amber-200': eq.estado === 'reparacion',
+            'bg-rose-50 text-rose-600 border-rose-200': eq.estado === 'baja',
+          }">
+          {{ eq.estado }}
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
       </div>
     </div>
   </div>
