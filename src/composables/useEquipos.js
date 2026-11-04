@@ -270,11 +270,14 @@ export function useEquipos() {
     }
   }
 
+  
+  const totalReportes = ref(0) // Paginacion de registros totales
 
-  /**
-   * Obtiene datos filtrados para reportes.
-    */
-    async function obtenerParaReporte(filtros = {}) {
+  async function obtenerParaReporte(filtros = {}, pagina = 1) {
+    const porPagina = 10
+    const desde = (pagina - 1) * porPagina
+    const hasta = desde + porPagina - 1
+
     try {
       let query = supabase
         .from('equipos')
@@ -282,7 +285,7 @@ export function useEquipos() {
           *,
           categorias:categoria_id (nombre),
           hardware_equipos (tipo, marca, modelo, tipo_ram, cantidad_modulos, tipo_almacenamiento, capacidad_gb)
-        `)
+        `, { count: 'exact' }) // <-- IMPORTANTE: Para saber el total
         .order('fecha_registro', { ascending: false })
 
       if (filtros.fecha_desde) query = query.gte('fecha_registro', filtros.fecha_desde)
@@ -291,8 +294,12 @@ export function useEquipos() {
       if (filtros.ubicacion) query = query.eq('ubicacion', filtros.ubicacion)
       if (filtros.estado) query = query.eq('estado', filtros.estado)
 
-      const { data, error: err } = await query
+      // Aplicar paginación
+      const { data, error: err, count } = await query.range(desde, hasta)
+      
       if (err) throw err
+      
+      totalReportes.value = count || 0
       
       return { ok: true, data: data || [] }
     } catch (err) {
@@ -304,6 +311,7 @@ export function useEquipos() {
   return {
     equipos,
     totalEquipos,
+    totalReportes,
     cargando,
     error,
     listar,

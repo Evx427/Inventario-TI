@@ -26,9 +26,18 @@ onMounted(async () => {
   await generarReporte()
 })
 
-async function generarReporte() {
+// Importa totalReportes
+const { obtenerParaReporte, totalReportes } = useEquipos()
+
+// ... variables existentes ...
+
+const paginaActual = ref(1)
+const registrosPorPagina = 10
+
+async function generarReporte(pagina = 1) {
+  paginaActual.value = pagina
   cargando.value = true
-  const res = await obtenerParaReporte(filtros.value)
+  const res = await obtenerParaReporte(filtros.value, pagina) // <-- Pasar página
   cargando.value = false
 
   if (res.ok) {
@@ -40,7 +49,15 @@ async function generarReporte() {
 
 function limpiarFiltros() {
   filtros.value = { fecha_desde: '', fecha_hasta: '', categoria_id: '', ubicacion: '', estado: '' }
-  generarReporte()
+  generarReporte(1)
+}
+
+// Cálculos de paginación
+const totalPaginas = computed(() => Math.ceil(totalReportes.value / registrosPorPagina))
+
+function cambiarPagina(nuevaPagina) {
+  if (nuevaPagina < 1 || nuevaPagina > totalPaginas.value) return
+  generarReporte(nuevaPagina)
 }
 
 // --- Cálculos de resumen ---
