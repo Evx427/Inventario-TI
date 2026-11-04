@@ -66,31 +66,7 @@ const conteoPorCategoria = computed(() => {
   return Object.entries(conteo).sort((a, b) => b[1] - a[1])
 })
 
-// --- Exportar CSV ---
-function exportarCSV() {
-  if (resultados.value.length === 0) {
-    toast.advertencia('No hay datos para exportar')
-    return
-  }
-
-  // Cabeceras
-  const headers = ['Código', 'Categoría', 'Marca', 'Modelo', 'Serial', 'F. Registro', 'F. Fabricación', 'Ubicación', 'Estado']
-  
-  // Filas
-  const filas = resultados.value.map(eq => [
-    eq.codigo_bien_publico,
-    eq.categorias?.nombre || '',
-    eq.marca || '',
-    eq.modelo || '',
-    formatearHardware(eq.hardware_equipos),
-    eq.numero_serie || '',
-    eq.fecha_registro || '',
-    eq.fecha_fabricacion || '',
-    eq.ubicacion || '',
-    eq.estado
-  ])
-
-//// Función para convertir el hardware en un texto legible
+// Función para convertir el hardware en un texto legible
 function formatearHardware(hardware) {
   if (!hardware || hardware.length === 0) return 'Sin hardware registrado'
 
@@ -125,6 +101,31 @@ function formatearHardware(hardware) {
 
   return partes.join(' | ')
 }
+
+// --- Exportar CSV ---
+function exportarCSV() {
+  if (resultados.value.length === 0) {
+    toast.advertencia('No hay datos para exportar')
+    return
+  }
+
+  // Cabeceras
+  const headers = ['Código', 'Categoría', 'Marca', 'Modelo', 'Serial', 'F. Registro', 'F. Fabricación', 'Ubicación', 'Estado']
+  
+  // Filas
+  const filas = resultados.value.map(eq => [
+    eq.codigo_bien_publico,
+    eq.categorias?.nombre || '',
+    eq.marca || '',
+    eq.modelo || '',
+    formatearHardware(eq.hardware_equipos),
+    eq.numero_serie || '',
+    eq.fecha_registro || '',
+    eq.fecha_fabricacion || '',
+    eq.ubicacion || '',
+    eq.estado
+  ])
+
 
   // Unir todo con comas y escapar comillas
   const csvContent = [
