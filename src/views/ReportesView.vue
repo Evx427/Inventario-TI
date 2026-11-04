@@ -109,23 +109,22 @@ function exportarCSV() {
     return
   }
 
-  // Cabeceras
-  const headers = ['Código', 'Categoría', 'Marca', 'Modelo', 'Serial', 'F. Registro', 'F. Fabricación', 'Ubicación', 'Estado']
+  // Cabeceras 
+  const headers = ['Código', 'Categoría', 'Marca', 'Modelo', 'Serial', 'F. Registro', 'F. Fabricación', 'Ubicación', 'Estado', 'Hardware']
   
-  // Filas
+  // Filas 
   const filas = resultados.value.map(eq => [
     eq.codigo_bien_publico,
     eq.categorias?.nombre || '',
     eq.marca || '',
     eq.modelo || '',
-    formatearHardware(eq.hardware_equipos),
-    eq.numero_serie || '',
+    eq.numero_serie || '',         
     eq.fecha_registro || '',
     eq.fecha_fabricacion || '',
     eq.ubicacion || '',
-    eq.estado
+    eq.estado,
+    formatearHardware(eq.hardware_equipos) 
   ])
-
 
   // Unir todo con comas y escapar comillas
   const csvContent = [
@@ -134,7 +133,7 @@ function exportarCSV() {
   ].join('\n')
 
   // Crear archivo y descargar
-  const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }) // \uFEFF es para que Excel detecte los acentos
+  const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }) 
   const link = document.createElement('a')
   const url = URL.createObjectURL(blob)
   
