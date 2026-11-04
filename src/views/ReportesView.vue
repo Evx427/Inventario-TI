@@ -121,6 +121,8 @@ function extraerHardware(hardware) {
 
 // --- Exportar CSV ---
 function exportarCSV() {
+const res = await obtenerParaReporte(filtros.value, 1, true)
+
   if (resultados.value.length === 0) {
     toast.advertencia('No hay datos para exportar')
     return
@@ -132,7 +134,7 @@ function exportarCSV() {
     'Memoria RAM', 'Almacenamiento', 'Tarjeta Gráfica (GPU)', 'Tarjeta de Red'
   ]
   
-  const filas = resultados.value.map(eq => {
+    const filas = res.data.map(eq => {
     const hw = extraerHardware(eq.hardware_equipos)
     return [
       eq.codigo_bien_publico, eq.categorias?.nombre || '', eq.marca || '', 

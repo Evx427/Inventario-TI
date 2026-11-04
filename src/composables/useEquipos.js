@@ -1,4 +1,4 @@
-  import { ref } from 'vue'
+import { ref } from 'vue'
 import { supabase } from '../lib/supabase'
 import { registrarAuditoria } from './useAudit'
 
@@ -24,15 +24,10 @@ export function useEquipos() {
           categorias:categoria_id (id, nombre),
           sistemas_operativos:so_id (id, nombre, familia)
         `, { count: 'exact' }) 
-        .order ('created_at', { ascending: false })
+        .order('created_at', { ascending: false })
 
-      // Filtros opcionales
-      if (filtros.categoria_id) {
-        query = query.eq('categoria_id', filtros.categoria_id)
-      }
-      if (filtros.estado) {
-        query = query.eq('estado', filtros.estado)
-      }
+      if (filtros.categoria_id) query = query.eq('categoria_id', filtros.categoria_id)
+      if (filtros.estado) query = query.eq('estado', filtros.estado)
       if (filtros.busqueda) {
         const b = `%${filtros.busqueda}%`
         query = query.or(
@@ -40,13 +35,12 @@ export function useEquipos() {
         )
       }
 
-     // Aplicar paginación
       const { data, error: err, count } = await query.range(desde, hasta)
       
       if (err) throw err
       
       equipos.value = data || []
-      totalEquipos.value = count || 0 // <-- ASIGNACIÓN CRUCIAL
+      totalEquipos.value = count || 0 
       
       return { ok: true, data: equipos.value }
     } catch (err) {
@@ -57,9 +51,6 @@ export function useEquipos() {
     }
   }
 
-  /**
-   * Obtiene un equipo con TODOS sus componentes de hardware.
-   */
   async function obtener(codigoPublico) {
     try {
       const { data: equipo, error: err1 } = await supabase
@@ -87,14 +78,10 @@ export function useEquipos() {
     }
   }
 
-  /**
-   * Crea un equipo con sus componentes de hardware.
-   */
   async function crear(equipo, hardware = []) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
 
-      // 1. Sanitizar datos del equipo
       const equipoLimpio = {
         codigo_bien_publico: equipo.codigo_bien_publico,
         codigo_bien_privado: equipo.codigo_bien_privado || null,
@@ -121,7 +108,6 @@ export function useEquipos() {
 
       if (err) throw err
 
-      // 2. Insertar hardware sanitizado
       if (hardware.length > 0) {
         const hardwareLimpio = hardware
           .map((h) => {
@@ -133,16 +119,9 @@ export function useEquipos() {
               modelo: h.modelo || null,
               identificador: h.identificador || null,
               tipo_ram: h.tipo === 'ram' ? (h.tipo_ram || null) : null,
-              cantidad_modulos:
-                h.tipo === 'ram' && h.cantidad_modulos
-                  ? parseInt(h.cantidad_modulos)
-                  : null,
-              tipo_almacenamiento:
-                h.tipo === 'almacenamiento' ? (h.tipo_almacenamiento || null) : null,
-              capacidad_gb:
-                h.tipo === 'almacenamiento' && h.capacidad_gb
-                  ? parseInt(h.capacidad_gb)
-                  : null,
+              cantidad_modulos: h.tipo === 'ram' && h.cantidad_modulos ? parseInt(h.cantidad_modulos) : null,
+              tipo_almacenamiento: h.tipo === 'almacenamiento' ? (h.tipo_almacenamiento || null) : null,
+              capacidad_gb: h.tipo === 'almacenamiento' && h.capacidad_gb ? parseInt(h.capacidad_gb) : null,
               detalles: h.detalles || {},
             }
           })
@@ -166,12 +145,8 @@ export function useEquipos() {
     }
   }
 
-  /**
-   * Actualiza un equipo y sus componentes.
-   */
   async function actualizar(codigoPublico, equipo, hardware = []) {
     try {
-      // Sanitizar datos
       const equipoLimpio = {
         codigo_bien_privado: equipo.codigo_bien_privado || null,
         categoria_id: equipo.categoria_id ? parseInt(equipo.categoria_id) : null,
@@ -195,7 +170,6 @@ export function useEquipos() {
 
       if (err) throw err
 
-      // Borrar hardware viejo
       const { error: errDel } = await supabase
         .from('hardware_equipos')
         .delete()
@@ -203,7 +177,6 @@ export function useEquipos() {
 
       if (errDel) throw errDel
 
-      // Reinsertar sanitizado
       if (hardware.length > 0) {
         const hardwareLimpio = hardware
           .map((h) => {
@@ -215,16 +188,9 @@ export function useEquipos() {
               modelo: h.modelo || null,
               identificador: h.identificador || null,
               tipo_ram: h.tipo === 'ram' ? (h.tipo_ram || null) : null,
-              cantidad_modulos:
-                h.tipo === 'ram' && h.cantidad_modulos
-                  ? parseInt(h.cantidad_modulos)
-                  : null,
-              tipo_almacenamiento:
-                h.tipo === 'almacenamiento' ? (h.tipo_almacenamiento || null) : null,
-              capacidad_gb:
-                h.tipo === 'almacenamiento' && h.capacidad_gb
-                  ? parseInt(h.capacidad_gb)
-                  : null,
+              cantidad_modulos: h.tipo === 'ram' && h.cantidad_modulos ? parseInt(h.cantidad_modulos) : null,
+              tipo_almacenamiento: h.tipo === 'almacenamiento' ? (h.tipo_almacenamiento || null) : null,
+              capacidad_gb: h.tipo === 'almacenamiento' && h.capacidad_gb ? parseInt(h.capacidad_gb) : null,
               detalles: h.detalles || {},
             }
           })
@@ -244,9 +210,6 @@ export function useEquipos() {
     }
   }
 
-  /**
-   * Elimina un equipo. Si RLS lo bloquea, se registra intento denegado.
-   */
   async function eliminar(codigoPublico) {
     try {
       const { error: err } = await supabase
@@ -270,10 +233,10 @@ export function useEquipos() {
     }
   }
 
-  
-  const totalReportes = ref(0) // Paginacion de registros totales
+  const totalReportes = ref(0)
 
-  async function obtenerParaReporte(filtros = {}, pagina = 1) {
+  // ✅ FUNCIÓN CORREGIDA: Acepta el parámetro traerTodo
+  async function obtenerParaReporte(filtros = {}, pagina = 1, traerTodo = false) {
     const porPagina = 10
     const desde = (pagina - 1) * porPagina
     const hasta = desde + porPagina - 1
@@ -285,7 +248,7 @@ export function useEquipos() {
           *,
           categorias:categoria_id (nombre),
           hardware_equipos (tipo, marca, modelo, tipo_ram, cantidad_modulos, tipo_almacenamiento, capacidad_gb)
-        `, { count: 'exact' }) // <-- IMPORTANTE: Para saber el total
+        `, { count: 'exact' })
         .order('fecha_registro', { ascending: false })
 
       if (filtros.fecha_desde) query = query.gte('fecha_registro', filtros.fecha_desde)
@@ -294,8 +257,12 @@ export function useEquipos() {
       if (filtros.ubicacion) query = query.eq('ubicacion', filtros.ubicacion)
       if (filtros.estado) query = query.eq('estado', filtros.estado)
 
-      // Aplicar paginación
-      const { data, error: err, count } = await query.range(desde, hasta)
+      // ✅ Si traerTodo es true, no aplicamos el rango (trae todos los registros)
+      if (!traerTodo) {
+        query = query.range(desde, hasta)
+      }
+      
+      const { data, error: err, count } = await query
       
       if (err) throw err
       
@@ -306,7 +273,6 @@ export function useEquipos() {
       return { ok: false, error: err.message }
     }
   }
-
 
   return {
     equipos,
@@ -321,4 +287,4 @@ export function useEquipos() {
     eliminar,
     obtenerParaReporte  
   }
-   }
+}
