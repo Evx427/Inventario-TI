@@ -120,7 +120,7 @@ const esRutaAuth = computed(() =>
           class="w-full text-xs bg-white/80 border border-rose-200 hover:bg-rose-50 text-rose-500 py-2.5 rounded-xl transition-all font-bold flex justify-center items-center gap-2"
           @click="mostrarConfirmacionSalir = true"
         >
-          <span>🚪</span> Cerrar Sesión
+          <span></span> Cerrar Sesión
         </button>
       </div>
     </aside>
