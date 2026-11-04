@@ -321,4 +321,4 @@ export function useEquipos() {
     eliminar,
     obtenerParaReporte  
   }
-  }
+   }
