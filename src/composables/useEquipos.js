@@ -257,7 +257,7 @@ export function useEquipos() {
       if (filtros.ubicacion) query = query.eq('ubicacion', filtros.ubicacion)
       if (filtros.estado) query = query.eq('estado', filtros.estado)
 
-      // ✅ Si traerTodo es true, no aplicamos el rango (trae todos los registros)
+      // Si traerTodo es true, no aplicamos el rango (trae todos los registros)
       if (!traerTodo) {
         query = query.range(desde, hasta)
       }

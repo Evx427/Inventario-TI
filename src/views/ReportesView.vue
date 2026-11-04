@@ -120,7 +120,7 @@ function extraerHardware(hardware) {
 }
 
 // --- Exportar CSV ---
-function exportarCSV() {
+async function exportarCSV() {
 const res = await obtenerParaReporte(filtros.value, 1, true)
 
   if (resultados.value.length === 0) {
