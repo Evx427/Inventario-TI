@@ -6,7 +6,9 @@ import { useNotificacionesStore } from '../stores/notificaciones'
 import BaseButton from '../components/ui/BaseButton.vue'
 
 const toast = useNotificacionesStore()
-const { obtenerParaReporte } = useEquipos()
+
+// ✅ JUNTAMOS LAS VARIABLES EN UNA SOLA DESESTRUCTURACIÓN
+const { obtenerParaReporte, totalReportes } = useEquipos()
 
 const categorias = ref([])
 const resultados = ref([])
@@ -20,24 +22,20 @@ const filtros = ref({
   estado: ''
 })
 
+// Paginación
+const paginaActual = ref(1)
+const registrosPorPagina = 10
+
 onMounted(async () => {
   const { data } = await supabase.from('categorias').select('*').order('id')
   categorias.value = data || []
   await generarReporte()
 })
 
-// Importa totalReportes
-const { obtenerParaReporte, totalReportes } = useEquipos()
-
-// ... variables existentes ...
-
-const paginaActual = ref(1)
-const registrosPorPagina = 10
-
 async function generarReporte(pagina = 1) {
   paginaActual.value = pagina
   cargando.value = true
-  const res = await obtenerParaReporte(filtros.value, pagina) // <-- Pasar página
+  const res = await obtenerParaReporte(filtros.value, pagina)
   cargando.value = false
 
   if (res.ok) {
@@ -63,7 +61,6 @@ function cambiarPagina(nuevaPagina) {
 // --- Cálculos de resumen ---
 const totalEquipos = computed(() => resultados.value.length)
 
-// Agrupar por ubicación
 const conteoPorUbicacion = computed(() => {
   const conteo = {}
   resultados.value.forEach(eq => {
@@ -73,7 +70,6 @@ const conteoPorUbicacion = computed(() => {
   return Object.entries(conteo).sort((a, b) => b[1] - a[1])
 })
 
-// Agrupar por categoría
 const conteoPorCategoria = computed(() => {
   const conteo = {}
   resultados.value.forEach(eq => {
@@ -96,15 +92,12 @@ function extraerHardware(hardware) {
 
   if (!hardware || hardware.length === 0) return datos
 
-  // Placa Base
   const placa = hardware.find(h => h.tipo === 'placa_base')
   if (placa) datos.placa = `${placa.marca || ''} ${placa.modelo || ''}`.trim()
 
-  // Procesador
   const cpu = hardware.find(h => h.tipo === 'procesador')
   if (cpu) datos.procesador = `${cpu.marca || ''} ${cpu.modelo || ''}`.trim()
 
-  // RAM
   const rams = hardware.filter(h => h.tipo === 'ram')
   if (rams.length > 0) {
     const totalModulos = rams.reduce((acc, r) => acc + (r.cantidad_modulos || 0), 0)
@@ -112,17 +105,14 @@ function extraerHardware(hardware) {
     datos.ram = `${totalModulos} módulo(s) ${tipo}`.trim()
   }
 
-  // Almacenamiento
   const discos = hardware.filter(h => h.tipo === 'almacenamiento')
   if (discos.length > 0) {
     datos.almacenamiento = discos.map(d => `${d.tipo_almacenamiento || ''} ${d.capacidad_gb || 0}GB`).join(' + ')
   }
 
-  // GPU
   const gpu = hardware.find(h => h.tipo === 'gpu')
   if (gpu) datos.gpu = `${gpu.marca || ''} ${gpu.modelo || ''}`.trim()
 
-  // Tarjeta de Red
   const red = hardware.find(h => h.tipo === 'red')
   if (red) datos.red = `${red.marca || ''} ${red.modelo || ''}`.trim()
 
@@ -136,54 +126,27 @@ function exportarCSV() {
     return
   }
 
-  // Cabeceras (Agregamos columnas individuales)
   const headers = [
-    'Código', 
-    'Categoría', 
-    'Marca', 
-    'Modelo', 
-    'Serial', 
-    'F. Registro', 
-    'F. Fabricación', 
-    'Ubicación', 
-    'Estado',
-    'Placa Base',
-    'Procesador',
-    'Memoria RAM',
-    'Almacenamiento',
-    'Tarjeta Gráfica (GPU)',
-    'Tarjeta de Red'
+    'Código', 'Categoría', 'Marca', 'Modelo', 'Serial', 'F. Registro', 
+    'F. Fabricación', 'Ubicación', 'Estado', 'Placa Base', 'Procesador', 
+    'Memoria RAM', 'Almacenamiento', 'Tarjeta Gráfica (GPU)', 'Tarjeta de Red'
   ]
   
-  // Filas
   const filas = resultados.value.map(eq => {
     const hw = extraerHardware(eq.hardware_equipos)
     return [
-      eq.codigo_bien_publico,
-      eq.categorias?.nombre || '',
-      eq.marca || '',
-      eq.modelo || '',
-      eq.numero_serie || '',
-      eq.fecha_registro || '',
-      eq.fecha_fabricacion || '',
-      eq.ubicacion || '',
-      eq.estado,
-      hw.placa,
-      hw.procesador,
-      hw.ram,
-      hw.almacenamiento,
-      hw.gpu,
-      hw.red
+      eq.codigo_bien_publico, eq.categorias?.nombre || '', eq.marca || '', 
+      eq.modelo || '', eq.numero_serie || '', eq.fecha_registro || '', 
+      eq.fecha_fabricacion || '', eq.ubicacion || '', eq.estado,
+      hw.placa, hw.procesador, hw.ram, hw.almacenamiento, hw.gpu, hw.red
     ]
   })
 
-  // Unir todo con comas y escapar comillas
   const csvContent = [
     headers.join(','),
     ...filas.map(fila => fila.map(campo => `"${campo}"`).join(','))
   ].join('\n')
 
-  // Crear archivo y descargar
   const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }) 
   const link = document.createElement('a')
   const url = URL.createObjectURL(blob)
@@ -236,20 +199,18 @@ function exportarCSV() {
         </div>
 
         <div>
-        <label class="block text-xs font-bold text-slate-500 mb-1">Ubicación</label>
-        <select 
-        v-model="filtros.ubicacion" 
-        class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-      >
-     <option value="">Todas las ubicaciones</option>
-     <option value="Laboratorio de Informática (1)">Laboratorio de Informática (1)</option>
-     <option value="Control de Estudio">Control de Estudio</option>
-     <option value="Oficina Académica">Oficina Académica</option>
-     <option value="Oficina General">Oficina General</option>
-     <option value="Oficina del Muru47">Oficina del Muru47</option>
-     <option value="Sala de profesores">Sala de profesores</option>
-    </select>
-     </div>
+          <label class="block text-xs font-bold text-slate-500 mb-1">Ubicación</label>
+          <select v-model="filtros.ubicacion" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+            <option value="">Todas las ubicaciones</option>
+            <option value="Laboratorio de Informática (1)">Laboratorio de Informática (1)</option>
+            <option value="Control de Estudio">Control de Estudio</option>
+            <option value="Oficina Académica">Oficina Académica</option>
+            <option value="Oficina General">Oficina General</option>
+            <option value="Oficina del Muru47">Oficina del Muru47</option>
+            <option value="Sala de profesores">Sala de profesores</option>
+          </select>
+        </div>
+
         <div>
           <label class="block text-xs font-bold text-slate-500 mb-1">Estado</label>
           <select v-model="filtros.estado" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
@@ -290,7 +251,7 @@ function exportarCSV() {
     <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
       <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
         <h3 class="text-sm font-bold text-slate-700">Detalle de Equipos</h3>
-        <span class="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">{{ resultados.length }} registros</span>
+        <span class="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">{{ totalReportes }} registros totales</span>
       </div>
 
       <div v-if="cargando" class="p-12 text-center text-slate-500 animate-pulse">Generando reporte...</div>
@@ -301,50 +262,83 @@ function exportarCSV() {
 
       <div v-else class="overflow-x-auto">
         <table class="w-full text-sm text-left">
-  <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-bold border-b border-slate-100">
-    <tr>
-      <th class="px-4 py-3">Código</th>
-      <th class="px-4 py-3">Categoría</th>
-      <th class="px-4 py-3">Marca / Modelo</th>
-      <th class="px-4 py-3">Serial</th>
-      <th class="px-4 py-3">Placa Base</th>
-      <th class="px-4 py-3">Procesador</th>
-      <th class="px-4 py-3">RAM</th>
-      <th class="px-4 py-3">Disco</th>
-      <th class="px-4 py-3">GPU</th>
-      <th class="px-4 py-3">Red</th>
-      <th class="px-4 py-3">Ubicación</th>
-      <th class="px-4 py-3">Estado</th>
-    </tr>
-  </thead>
-  <tbody class="divide-y divide-slate-100"> 
-    <tr v-for="eq in resultados" :key="eq.codigo_bien_publico" class="hover:bg-blue-50/30 transition-colors">
-      <td class="px-4 py-3 font-mono text-xs font-bold text-slate-600">{{ eq.codigo_bien_publico }}</td>
-      <td class="px-4 py-3 text-slate-600">{{ eq.categorias?.nombre }}</td>
-      <td class="px-4 py-3 text-slate-700 font-medium">{{ eq.marca }} {{ eq.modelo }}</td>
-      <td class="px-4 py-3 text-slate-500">{{ eq.numero_serie || '—' }}</td>
-      
-      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).placa }}</td>
-      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).procesador }}</td>
-      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).ram }}</td>
-      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).almacenamiento }}</td>
-      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).gpu }}</td>
-      <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).red }}</td>
-      
-      <td class="px-4 py-3 text-slate-600">{{ eq.ubicacion || '—' }}</td>
-      <td class="px-4 py-3">
-        <span class="px-2 py-1 rounded text-[10px] font-bold uppercase border"
-          :class="{
-            'bg-emerald-50 text-emerald-600 border-emerald-200': eq.estado === 'activo',
-            'bg-amber-50 text-amber-600 border-amber-200': eq.estado === 'reparacion',
-            'bg-rose-50 text-rose-600 border-rose-200': eq.estado === 'baja',
-          }">
-          {{ eq.estado }}
-        </span>
-      </td>
-    </tr>
-  </tbody>
-</table>
+          <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-bold border-b border-slate-100">
+            <tr>
+              <th class="px-4 py-3">Código</th>
+              <th class="px-4 py-3">Categoría</th>
+              <th class="px-4 py-3">Marca / Modelo</th>
+              <th class="px-4 py-3">Serial</th>
+              <th class="px-4 py-3">Placa Base</th>
+              <th class="px-4 py-3">Procesador</th>
+              <th class="px-4 py-3">RAM</th>
+              <th class="px-4 py-3">Disco</th>
+              <th class="px-4 py-3">GPU</th>
+              <th class="px-4 py-3">Red</th>
+              <th class="px-4 py-3">Ubicación</th>
+              <th class="px-4 py-3">Estado</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100"> 
+            <tr v-for="eq in resultados" :key="eq.codigo_bien_publico" class="hover:bg-blue-50/30 transition-colors">
+              <td class="px-4 py-3 font-mono text-xs font-bold text-slate-600">{{ eq.codigo_bien_publico }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ eq.categorias?.nombre }}</td>
+              <td class="px-4 py-3 text-slate-700 font-medium">{{ eq.marca }} {{ eq.modelo }}</td>
+              <td class="px-4 py-3 text-slate-500">{{ eq.numero_serie || '—' }}</td>
+              
+              <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).placa }}</td>
+              <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).procesador }}</td>
+              <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).ram }}</td>
+              <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).almacenamiento }}</td>
+              <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).gpu }}</td>
+              <td class="px-4 py-3 text-xs text-slate-600">{{ extraerHardware(eq.hardware_equipos).red }}</td>
+              
+              <td class="px-4 py-3 text-slate-600">{{ eq.ubicacion || '—' }}</td>
+              <td class="px-4 py-3">
+                <span class="px-2 py-1 rounded text-[10px] font-bold uppercase border"
+                  :class="{
+                    'bg-emerald-50 text-emerald-600 border-emerald-200': eq.estado === 'activo',
+                    'bg-amber-50 text-amber-600 border-amber-200': eq.estado === 'reparacion',
+                    'bg-rose-50 text-rose-600 border-rose-200': eq.estado === 'baja',
+                  }">
+                  {{ eq.estado }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ✅ BLOQUE DE PAGINACIÓN AGREGADO AQUÍ -->
+      <div v-if="totalPaginas > 1" class="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <p class="text-xs font-medium text-slate-500">
+          Mostrando <span class="font-bold text-slate-700">{{ (paginaActual - 1) * registrosPorPagina + 1 }}</span> 
+          a 
+          <span class="font-bold text-slate-700">{{ Math.min(paginaActual * registrosPorPagina, totalReportes) }}</span> 
+          de <span class="font-bold text-slate-700">{{ totalReportes }}</span> equipos
+        </p>
+        <div class="flex items-center gap-2">
+          <button
+            :disabled="paginaActual === 1"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border"
+            :class="paginaActual === 1 ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
+            @click="cambiarPagina(paginaActual - 1)"
+          >
+            Anterior
+          </button>
+          
+          <span class="text-xs font-bold text-slate-700 px-2">
+            Página {{ paginaActual }} de {{ totalPaginas }}
+          </span>
+
+          <button
+            :disabled="paginaActual === totalPaginas"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border"
+            :class="paginaActual === totalPaginas ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
+            @click="cambiarPagina(paginaActual + 1)"
+          >
+            Siguiente
+          </button>
+        </div>
       </div>
     </div>
   </div>
