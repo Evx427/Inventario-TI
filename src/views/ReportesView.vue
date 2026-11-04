@@ -232,7 +232,7 @@ function exportarCSV() {
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="bg-blue-50 border border-blue-100 rounded-2xl p-6 shadow-sm flex flex-col justify-center">
         <p class="text-xs font-bold text-blue-600 uppercase tracking-wider">Total Equipos Encontrados</p>
-        <p class="text-5xl font-black text-blue-800 mt-2">{{ totalEquipos }}</p>
+        <p class="text-5xl font-black text-blue-800 mt-2">{{ totalReportes }}</p>
       </div>
 
       <div class="md:col-span-2 bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
@@ -308,7 +308,7 @@ function exportarCSV() {
         </table>
       </div>
 
-      <!-- ✅ BLOQUE DE PAGINACIÓN AGREGADO AQUÍ -->
+      <!--  PAGINACIÓN -->
       <div v-if="totalPaginas > 1" class="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
         <p class="text-xs font-medium text-slate-500">
           Mostrando <span class="font-bold text-slate-700">{{ (paginaActual - 1) * registrosPorPagina + 1 }}</span> 
