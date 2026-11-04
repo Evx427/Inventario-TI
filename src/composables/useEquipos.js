@@ -273,28 +273,22 @@ export function useEquipos() {
 
   /**
    * Obtiene datos filtrados para reportes.
-   */
-  async function obtenerParaReporte(filtros = {}) {
+    */
+    async function obtenerParaReporte(filtros = {}) {
     try {
       let query = supabase
         .from('equipos')
         .select(`
-          codigo_bien_publico,
-          marca,
-          modelo,
-          numero_serie,
-          fecha_registro,
-          fecha_fabricacion,
-          ubicacion,
-          estado,
-          categorias:categoria_id (nombre)
+          *,
+          categorias:categoria_id (nombre),
+          hardware_equipos (tipo, marca, modelo, tipo_ram, cantidad_modulos, tipo_almacenamiento, capacidad_gb)
         `)
         .order('fecha_registro', { ascending: false })
 
       if (filtros.fecha_desde) query = query.gte('fecha_registro', filtros.fecha_desde)
       if (filtros.fecha_hasta) query = query.lte('fecha_registro', filtros.fecha_hasta)
       if (filtros.categoria_id) query = query.eq('categoria_id', filtros.categoria_id)
-      if (filtros.ubicacion) query = query.ilike('ubicacion', `%${filtros.ubicacion}%`)
+      if (filtros.ubicacion) query = query.eq('ubicacion', filtros.ubicacion)
       if (filtros.estado) query = query.eq('estado', filtros.estado)
 
       const { data, error: err } = await query

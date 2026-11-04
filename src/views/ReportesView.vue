@@ -82,12 +82,49 @@ function exportarCSV() {
     eq.categorias?.nombre || '',
     eq.marca || '',
     eq.modelo || '',
+    formatearHardware(eq.hardware_equipos),
     eq.numero_serie || '',
     eq.fecha_registro || '',
     eq.fecha_fabricacion || '',
     eq.ubicacion || '',
     eq.estado
   ])
+
+//// Función para convertir el hardware en un texto legible
+function formatearHardware(hardware) {
+  if (!hardware || hardware.length === 0) return 'Sin hardware registrado'
+
+  const partes = []
+
+  // Procesador
+  const cpu = hardware.find(h => h.tipo === 'procesador')
+  if (cpu) partes.push(`CPU: ${cpu.marca || ''} ${cpu.modelo || ''}`.trim())
+
+  // RAM
+  const rams = hardware.filter(h => h.tipo === 'ram')
+  if (rams.length > 0) {
+    const totalModulos = rams.reduce((acc, r) => acc + (r.cantidad_modulos || 0), 0)
+    const tipo = rams[0].tipo_ram || ''
+    partes.push(`RAM: ${totalModulos} módulo(s) ${tipo}`.trim())
+  }
+
+  // Almacenamiento
+  const discos = hardware.filter(h => h.tipo === 'almacenamiento')
+  if (discos.length > 0) {
+    const discosTexto = discos.map(d => `${d.tipo_almacenamiento || ''} ${d.capacidad_gb || 0}GB`).join(' + ')
+    partes.push(`Almacenamiento: ${discosTexto}`)
+  }
+
+  // GPU
+  const gpu = hardware.find(h => h.tipo === 'gpu')
+  if (gpu) partes.push(`GPU: ${gpu.marca || ''} ${gpu.modelo || ''}`.trim())
+
+  // Placa base
+  const placa = hardware.find(h => h.tipo === 'placa_base')
+  if (placa) partes.push(`Placa: ${placa.marca || ''} ${placa.modelo || ''}`.trim())
+
+  return partes.join(' | ')
+}
 
   // Unir todo con comas y escapar comillas
   const csvContent = [
@@ -218,6 +255,7 @@ function exportarCSV() {
               <th class="px-4 py-3">Código</th>
               <th class="px-4 py-3">Categoría</th>
               <th class="px-4 py-3">Marca / Modelo</th>
+              <th class="px-4 py-3">Especificaciones de Hardware</th>
               <th class="px-4 py-3">F. Registro</th>
               <th class="px-4 py-3">F. Fabricación</th>
               <th class="px-4 py-3">Ubicación</th>
@@ -229,6 +267,7 @@ function exportarCSV() {
               <td class="px-4 py-3 font-mono text-xs font-bold text-slate-600">{{ eq.codigo_bien_publico }}</td>
               <td class="px-4 py-3 text-slate-600">{{ eq.categorias?.nombre }}</td>
               <td class="px-4 py-3 text-slate-700 font-medium">{{ eq.marca }} {{ eq.modelo }}</td>
+                  <td class="px-4 py-3 text-xs text-slate-600 max-w-xs">{{ formatearHardware(eq.hardware_equipos) }}</td>
               <td class="px-4 py-3 text-slate-500">{{ eq.fecha_registro || '—' }}</td>
               <td class="px-4 py-3 text-slate-500">{{ eq.fecha_fabricacion || '—' }}</td>
               <td class="px-4 py-3 text-slate-600">{{ eq.ubicacion || '—' }}</td>
