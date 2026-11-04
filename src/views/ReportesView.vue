@@ -224,7 +224,7 @@ function exportarCSV() {
       </div>
       <div class="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
         <BaseButton variant="cancel" @click="limpiarFiltros">Limpiar</BaseButton>
-        <BaseButton variant="primary" @click="generarReporte" :loading="cargando">Generar Reporte</BaseButton>
+        <BaseButton variant="primary" @click="generarReporte(1)" :loading="cargando">Generar Reporte</BaseButton>
       </div>
     </div>
 
