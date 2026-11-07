@@ -157,7 +157,7 @@ async function ejecutarEliminar() {
 }
 
 // --- Exportaciones ---
-function exportarCSV() {
+async function exportarCSV() {
   const res = await listar(filtros.value, 1, true)
 
   if (!res.ok || res.data.length === 0) {
