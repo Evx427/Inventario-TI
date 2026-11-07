@@ -8,7 +8,7 @@ export function useControlMac() {
   const cargando = ref(false)
   const error = ref('')
 
-  async function listar(filtros = {}, pagina = 1) {
+    async function listar(filtros = {}, pagina = 1, traerTodo = false) {
     cargando.value = true
     error.value = ''
 
@@ -26,18 +26,22 @@ export function useControlMac() {
         const b = `%${filtros.busqueda}%`
         query = query.or(`marca.ilike.${b},modelo.ilike.${b},propietario.ilike.${b},direccion_mac.ilike.${b}`)
       }
-
       if (filtros.tipo_personal) {
         query = query.eq('tipo_personal', filtros.tipo_personal)
       }
 
-      const { data, error: err, count } = await query.range(desde, hasta)
+      // Atrae todo los registros 
+      if (!traerTodo) {
+        query = query.range(desde, hasta)
+      }
+
+      const { data, error: err, count } = await query
 
       if (err) throw err
 
       dispositivos.value = data || []
       totalRegistros.value = count || 0
-
+      
       return { ok: true, data: dispositivos.value }
     } catch (err) {
       error.value = err.message

@@ -158,13 +158,15 @@ async function ejecutarEliminar() {
 
 // --- Exportaciones ---
 function exportarCSV() {
-  if (dispositivos.value.length === 0) {
+  const res = await listar(filtros.value, 1, true)
+
+  if (!res.ok || res.data.length === 0) {
     toast.advertencia('No hay datos para exportar')
     return
   }
 
   const headers = ['Marca', 'Modelo', 'Dirección MAC', 'Propietario', 'Tipo de Personal']
-  const filas = dispositivos.value.map(d => [
+  const filas = res.data.map(d => [
     d.marca, d.modelo, d.direccion_mac, d.propietario, d.tipo_personal
   ])
 
@@ -184,11 +186,14 @@ function exportarCSV() {
   link.click()
   document.body.removeChild(link)
   
-  toast.exito('Reporte CSV exportado')
+  toast.exito(`Reporte exportado con ${res.data.length} dispositivos.`)
 }
 
-function exportarPDF() {
-  if (dispositivos.value.length === 0) {
+// --- Exportar PDF (Todos los registros) ---
+async function exportarPDF() {
+  const res = await listar(filtros.value, 1, true)
+
+  if (!res.ok || res.data.length === 0) {
     toast.advertencia('No hay datos para exportar')
     return
   }
@@ -204,7 +209,7 @@ function exportarPDF() {
   doc.setFont('helvetica', 'normal')
   doc.text('Fecha de Emisión: ' + new Date().toLocaleDateString('es-ES'), anchoPagina - 15, 30, { align: 'right' })
 
-  const filas = dispositivos.value.map(d => [
+  const filas = res.data.map(d => [
     d.marca, d.modelo, d.direccion_mac, d.propietario, d.tipo_personal.toUpperCase()
   ])
 
@@ -219,8 +224,9 @@ function exportarPDF() {
   })
 
   doc.save(`Control_MAC_${new Date().toISOString().slice(0, 10)}.pdf`)
-  toast.exito('Reporte PDF exportado')
+  toast.exito(`PDF exportado con ${res.data.length} dispositivos.`)
 }
+
 </script>
 
 <template>
