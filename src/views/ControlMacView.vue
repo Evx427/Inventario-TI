@@ -133,9 +133,9 @@ async function onGuardar() {
   const datosAGuardar = { ...form.value }
 
   // Si el checkbox está marcado, forzamos los valores de institución
-  if (esInstitucional.value) {
+  if (esInstitucional.value) {    
     datosAGuardar.propietario = 'Perteneciente a la UPTMA Ext. Villa del Rosario'
-    datosAGuardar.tipo_personal = 'Institucional' 
+    datosAGuardar.tipo_personal = 'institucional' 
   }
 
   guardando.value = true
