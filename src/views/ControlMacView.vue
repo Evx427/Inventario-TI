@@ -285,6 +285,7 @@ async function exportarPDF() {
         <option value="docente">Docente</option>
         <option value="administrativo">Administrativo</option>
         <option value="obrero">Obrero</option>
+        <option value="institucional">Institución</option>
       </select>
       <BaseButton variant="cancel" @click="filtros = { busqueda: '', tipo_personal: '' }; aplicarFiltros()" class="w-full">
         Limpiar filtros
