@@ -222,7 +222,7 @@ async function exportarPDF() {
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(14)
-  doc.text('CONTROL DE DISPOSITIVOS MÓVILES (DIRECCIONES MAC)', anchoPagina / 2, 20, { align: 'center' })
+  doc.text('CONTROL DE DISPOSITIVOS-(DIRECCIONES MAC)', anchoPagina / 2, 20, { align: 'center' })
   
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
