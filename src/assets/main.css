@@ -1,5 +1,36 @@
 @import "tailwindcss";
 
+
+:root {
+  /* Paleta Oregon Trail */
+  --trail-brown: #8B4513;
+  --prairie-green: #556B2F;
+  --sky-blue: #87CEEB;
+  --wagon-tan: #D2B48C;
+  --campfire-orange: #FF8C00;
+  --river-blue: #4682B4;
+  --dust-yellow: #DAA520;
+  --night-black: #1A1A1A;
+  --bg-paper: #F4F1EA; /* Fondo tipo papel/mapa */
+  
+  /* Fuentes */
+  --font-pixel: 'Press Start 2P', cursive;
+  --font-retro: 'VT323', monospace;
+}
+
+body {
+  font-family: var(--font-retro);
+  background-color: var(--bg-paper);
+  color: var(--night-black);
+  font-size: 1.25rem; /* VT323 es pequeña, necesita tamaño mayor */
+}
+
+h1, h2, h3, .font-pixel {
+  font-family: var(--font-pixel);
+}
+
+
+
 /* Estilos globales para hacer las tablas responsivas en móviles */
 .table-responsive {
   width: 100%;
