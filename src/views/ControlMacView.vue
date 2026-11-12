@@ -12,40 +12,39 @@ import autoTable from 'jspdf-autotable'
 const auth = useAuth()
 const toast = useNotificacionesStore()
 
-// ✅ Incluimos las nuevas funciones
 const { 
-  dispositivos, 
-  totalRegistros, 
-  cargando, 
-  listar, 
-  crear, 
-  actualizar, 
-  eliminar,
-  guardarDispositivosAdicionales,
-  obtenerDispositivosAdicionales 
+  dispositivos, totalRegistros, cargando, listar, crear, actualizar, eliminar,
+  guardarDispositivosAdicionales, obtenerDispositivosAdicionales 
 } = useControlMac()
 
-// Variables para dispositivos adicionales
-const tieneMasDispositivos = ref(false)
-const dispositivosAdicionales = ref([])
-
+// Estado
 const filtros = ref({ busqueda: '', tipo_personal: '' })
 const paginaActual = ref(1)
 const registrosPorPagina = 10
 
 const modalAbierto = ref(false)
 const modalConfirmAbierto = ref(false)
+const modalDetalleAbierto = ref(false)
+
 const dispositivoEditando = ref(null)
 const dispositivoAEliminar = ref(null)
+const dispositivoDetalle = ref(null)
+const dispositivosDetalleAdicionales = ref([])
 const guardando = ref(false)
+const cargandoDetalle = ref(false)
 
 const form = ref(getFormVacio())
 const erroresValidacion = ref({})
 const esInstitucional = ref(false)
+const tieneMasDispositivos = ref(false)
+const dispositivosAdicionales = ref([])
+
+//  Orden de tipos: Docente → Administrativo → Vigilante → Obrero → Institucional
+const ordenTipos = { docente: 1, administrativo: 2, vigilante: 3, obrero: 4, institucional: 5 }
 
 function getFormVacio() {
   return {
-    nombre: '', 
+    nombre: '', // Solo se usa si es institucional
     marca: '',
     modelo: '',
     direccion_mac: '',
@@ -74,7 +73,17 @@ function cambiarPagina(nuevaPagina) {
   refrescar(nuevaPagina)
 }
 
-// --- Formulario y Validaciones ---
+// Ordenar los dispositivos por tipo de personal
+const dispositivosOrdenados = computed(() => {
+  return [...dispositivos.value].sort((a, b) => {
+    const ordenA = ordenTipos[a.tipo_personal] || 99
+    const ordenB = ordenTipos[b.tipo_personal] || 99
+    if (ordenA !== ordenB) return ordenA - ordenB
+    return (a.propietario || '').localeCompare(b.propietario || '')
+  })
+})
+
+// --- Formulario ---
 function abrirCrear() {
   dispositivoEditando.value = null
   esInstitucional.value = false
@@ -95,7 +104,6 @@ async function abrirEditar(dispositivo) {
     esInstitucional.value = false
   }
 
-  //  Cargar dispositivos adicionales
   const resDis = await obtenerDispositivosAdicionales(dispositivo.id)
   if (resDis.ok && resDis.data.length > 0) {
     dispositivosAdicionales.value = resDis.data
@@ -109,7 +117,21 @@ async function abrirEditar(dispositivo) {
   modalAbierto.value = true
 }
 
-// Formatear MAC principal
+// NUEVO: Abrir modal de detalles
+async function abrirDetalle(dispositivo) {
+  dispositivoDetalle.value = dispositivo
+  cargandoDetalle.value = true
+  modalDetalleAbierto.value = true
+  
+  const res = await obtenerDispositivosAdicionales(dispositivo.id)
+  if (res.ok) {
+    dispositivosDetalleAdicionales.value = res.data
+  } else {
+    dispositivosDetalleAdicionales.value = []
+  }
+  cargandoDetalle.value = false
+}
+
 function formatearMAC(event) {
   let valor = event.target.value.replace(/[^A-Fa-f0-9]/g, '') 
   valor = valor.toUpperCase()
@@ -121,7 +143,6 @@ function formatearMAC(event) {
   form.value.direccion_mac = formateado
 }
 
-// Formatear MAC de adicionales
 function formatearMACAdicional(event, index) {
   let valor = event.target.value.replace(/[^A-Fa-f0-9]/g, '')
   valor = valor.toUpperCase()
@@ -133,7 +154,6 @@ function formatearMACAdicional(event, index) {
   dispositivosAdicionales.value[index].direccion_mac = formateado
 }
 
-// Agregar / Eliminar adicionales
 function agregarDispositivoAdicional() {
   dispositivosAdicionales.value.push({
     nombre_dispositivo: '',
@@ -152,10 +172,12 @@ function validar() {
   erroresValidacion.value = {}
   let valido = true
 
-  if (!form.value.nombre.trim()) {
-    erroresValidacion.value.nombre = 'El nombre del equipo es obligatorio.'
+  //  Solo validar nombre si es institucional
+  if (esInstitucional.value && !form.value.nombre.trim()) {
+    erroresValidacion.value.nombre = 'El nombre del equipo es obligatorio para dispositivos institucionales.'
     valido = false
   }
+
   if (!form.value.marca.trim()) {
     erroresValidacion.value.marca = 'La marca es obligatoria.'
     valido = false
@@ -174,11 +196,10 @@ function validar() {
     erroresValidacion.value.direccion_mac = 'La dirección MAC es obligatoria.'
     valido = false
   } else if (!macRegex.test(form.value.direccion_mac)) {
-    erroresValidacion.value.direccion_mac = 'Formato inválido (ej. AA-BB-CC-DD-EE-FF).'
+    erroresValidacion.value.direccion_mac = 'Formato inválido.'
     valido = false
   }
 
-  //  Validar adicionales si el checkbox está marcado
   if (tieneMasDispositivos.value) {
     if (dispositivosAdicionales.value.length === 0) {
       erroresValidacion.value.dispositivos = 'Debes agregar al menos un dispositivo.'
@@ -207,6 +228,9 @@ async function onGuardar() {
   if (esInstitucional.value) {    
     datosAGuardar.propietario = 'Perteneciente a la UPTMA Ext. Villa del Rosario'
     datosAGuardar.tipo_personal = 'institucional' 
+  } else {
+    // Si no es institucional, el nombre va vacío
+    datosAGuardar.nombre = null
   }
 
   guardando.value = true
@@ -214,14 +238,12 @@ async function onGuardar() {
 
   if (dispositivoEditando.value) {
     res = await actualizar(dispositivoEditando.value.id, datosAGuardar)
-    
     if (res.ok) {
       const aGuardar = tieneMasDispositivos.value ? dispositivosAdicionales.value : []
       await guardarDispositivosAdicionales(dispositivoEditando.value.id, aGuardar)
     }
   } else {
     res = await crear(datosAGuardar)
-    
     if (res.ok && tieneMasDispositivos.value) {
       await guardarDispositivosAdicionales(res.data.id, dispositivosAdicionales.value)
     }
@@ -231,14 +253,13 @@ async function onGuardar() {
 
   if (res.ok) {
     modalAbierto.value = false
-    toast.exito(dispositivoEditando.value ? 'Dispositivo actualizado correctamente' : 'Dispositivo registrado con éxito')
+    toast.exito(dispositivoEditando.value ? 'Dispositivo actualizado' : 'Dispositivo registrado')
     await refrescar(paginaActual.value)
   } else {
     toast.error('Error: ' + res.error)
   }
 }
 
-// --- Eliminar ---
 function pedirConfirmacionEliminar(dispositivo) {
   dispositivoAEliminar.value = dispositivo
   modalConfirmAbierto.value = true  
@@ -246,13 +267,12 @@ function pedirConfirmacionEliminar(dispositivo) {
 
 async function ejecutarEliminar() {
   if (!dispositivoAEliminar.value) return
-
   const id = dispositivoAEliminar.value.id
   modalConfirmAbierto.value = false
 
   const res = await eliminar(id)
   if (res.ok) {
-    toast.exito('Dispositivo eliminado del registro')
+    toast.exito('Dispositivo eliminado')
     await refrescar(paginaActual.value)
   } else {
     toast.error(res.error)
@@ -263,7 +283,6 @@ async function ejecutarEliminar() {
 // --- Exportaciones ---
 async function exportarCSV() {
   const res = await listar(filtros.value, 1, true)
-
   if (!res.ok || res.data.length === 0) {
     toast.advertencia('No hay datos para exportar')
     return
@@ -271,7 +290,7 @@ async function exportarCSV() {
 
   const headers = ['Nombre', 'Marca', 'Modelo', 'Dirección MAC', 'Propietario', 'Tipo de Personal']
   const filas = res.data.map(d => [
-    d.nombre || '', d.marca, d.modelo, d.direccion_mac, d.propietario, d.tipo_personal
+    d.nombre || '—', d.marca, d.modelo, d.direccion_mac, d.propietario, d.tipo_personal
   ])
 
   const csvContent = [
@@ -295,7 +314,6 @@ async function exportarCSV() {
 
 async function exportarPDF() {
   const res = await listar(filtros.value, 1, true)
-
   if (!res.ok || res.data.length === 0) {
     toast.advertencia('No hay datos para exportar')
     return
@@ -313,7 +331,7 @@ async function exportarPDF() {
   doc.text('Fecha de Emisión: ' + new Date().toLocaleDateString('es-ES'), anchoPagina - 15, 30, { align: 'right' })
 
   const filas = res.data.map(d => [
-    d.nombre || '', d.marca, d.modelo, d.direccion_mac, d.propietario, d.tipo_personal.toUpperCase()
+    d.nombre || '—', d.marca, d.modelo, d.direccion_mac, d.propietario, d.tipo_personal.toUpperCase()
   ])
 
   autoTable(doc, {
@@ -353,6 +371,7 @@ async function exportarPDF() {
         <option value="">Todos los tipos</option>
         <option value="docente">Docente</option>
         <option value="administrativo">Administrativo</option>
+        <option value="vigilante">Vigilante</option>
         <option value="obrero">Obrero</option>
         <option value="institucional">Institución</option>
       </select>
@@ -363,11 +382,11 @@ async function exportarPDF() {
     <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
       <div v-if="cargando" class="p-8 text-center text-slate-500 animate-pulse">Cargando dispositivos...</div>
 
-      <div v-else-if="dispositivos.length > 0" class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[700px]">
+      <div v-else-if="dispositivosOrdenados.length > 0" class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[800px]">
           <thead class="bg-slate-50 text-slate-500 text-left text-xs uppercase font-bold">
             <tr>
-              <th class="px-4 py-4">Equipo</th> 
+              <th class="px-4 py-4">Equipo Principal</th>
               <th class="px-4 py-4">Dirección MAC</th>
               <th class="px-4 py-4">Propietario</th>
               <th class="px-4 py-4">Tipo</th>
@@ -375,7 +394,7 @@ async function exportarPDF() {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-100">
-            <tr v-for="d in dispositivos" :key="d.id" class="hover:bg-blue-50/30 transition-colors">
+            <tr v-for="d in dispositivosOrdenados" :key="d.id" class="hover:bg-blue-50/30 transition-colors">
               <td class="px-4 py-3">
                 <p class="font-bold text-slate-800">{{ d.nombre || '—' }}</p>
                 <p class="text-xs text-slate-500">{{ d.marca }} {{ d.modelo }}</p>
@@ -383,12 +402,20 @@ async function exportarPDF() {
               <td class="px-4 py-3 font-mono text-xs font-semibold text-slate-600">{{ d.direccion_mac }}</td>
               <td class="px-4 py-3 text-slate-700 font-medium">{{ d.propietario }}</td>
               <td class="px-4 py-3">
-                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border capitalize bg-slate-100 text-slate-600 border-slate-200">
+                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border capitalize"
+                  :class="{
+                    'bg-blue-100 text-blue-700 border-blue-200': d.tipo_personal === 'docente',
+                    'bg-violet-100 text-violet-700 border-violet-200': d.tipo_personal === 'administrativo',
+                    'bg-amber-100 text-amber-700 border-amber-200': d.tipo_personal === 'vigilante',
+                    'bg-slate-100 text-slate-700 border-slate-200': d.tipo_personal === 'obrero',
+                    'bg-emerald-100 text-emerald-700 border-emerald-200': d.tipo_personal === 'institucional',
+                  }">
                   {{ d.tipo_personal }}
                 </span>
               </td>
               <td class="px-4 py-3 text-right">
                 <div class="inline-flex gap-2">
+                  <BaseButton size="sm" variant="ghost" @click="abrirDetalle(d)">Ver</BaseButton>
                   <BaseButton v-if="auth.puedeEscribir" size="sm" variant="secondary" @click="abrirEditar(d)">Editar</BaseButton>
                   <BaseButton v-if="auth.isSuperUsuario" size="sm" variant="danger" @click="pedirConfirmacionEliminar(d)">Eliminar</BaseButton>
                 </div>
@@ -419,33 +446,7 @@ async function exportarPDF() {
     <BaseModal :open="modalAbierto" :title="dispositivoEditando ? 'Editar Dispositivo' : 'Nuevo Dispositivo'" size="md" @close="modalAbierto = false">
       <form class="space-y-4" @submit.prevent="onGuardar">
         
-        <!--  Nombre del Equipo -->
-        <div>
-          <label class="block text-sm font-bold text-slate-700 mb-1">Nombre del Equipo *</label>
-          <input v-model="form.nombre" required placeholder="Ej: Laptop de Docente" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" :class="{ 'border-rose-400': erroresValidacion.nombre }" />
-          <p v-if="erroresValidacion.nombre" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.nombre }}</p>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-bold text-slate-700 mb-1">Marca *</label>
-            <input v-model="form.marca" required class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" :class="{ 'border-rose-400': erroresValidacion.marca }" />
-            <p v-if="erroresValidacion.marca" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.marca }}</p>
-          </div>
-          <div>
-            <label class="block text-sm font-bold text-slate-700 mb-1">Modelo *</label>
-            <input v-model="form.modelo" required class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" :class="{ 'border-rose-400': erroresValidacion.modelo }" />
-            <p v-if="erroresValidacion.modelo" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.modelo }}</p>
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-bold text-slate-700 mb-1">Dirección MAC *</label>
-          <input :value="form.direccion_mac" @input="formatearMAC" required placeholder="AA-BB-CC-DD-EE-FF" maxlength="17" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono uppercase" :class="{ 'border-rose-400': erroresValidacion.direccion_mac }" />
-          <p v-if="erroresValidacion.direccion_mac" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.direccion_mac }}</p>
-        </div>
-
-        <!-- Checkbox Institucional -->
+        <!--  Checkbox Institucional PRIMERO -->
         <div class="bg-violet-50 border border-violet-100 rounded-xl p-4">
           <label class="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" v-model="esInstitucional" class="w-5 h-5 text-violet-600 rounded" />
@@ -456,6 +457,33 @@ async function exportarPDF() {
           </label>
         </div>
 
+        <!-- Nombre del equipo (solo si es institucional) -->
+        <div v-if="esInstitucional">
+          <label class="block text-sm font-bold text-slate-700 mb-1">Nombre del Equipo (Hostname) *</label>
+          <input v-model="form.nombre" placeholder="Ej: PC-LAB-01" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" :class="{ 'border-rose-400': erroresValidacion.nombre }" />
+          <p v-if="erroresValidacion.nombre" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.nombre }}</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Marca *</label>
+            <input v-model="form.marca" required placeholder="Ej: Samsung" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" :class="{ 'border-rose-400': erroresValidacion.marca }" />
+            <p v-if="erroresValidacion.marca" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.marca }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Modelo *</label>
+            <input v-model="form.modelo" required placeholder="Ej: Galaxy A54" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" :class="{ 'border-rose-400': erroresValidacion.modelo }" />
+            <p v-if="erroresValidacion.modelo" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.modelo }}</p>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-1">Dirección MAC *</label>
+          <input :value="form.direccion_mac" @input="formatearMAC" required placeholder="AA-BB-CC-DD-EE-FF" maxlength="17" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono uppercase" :class="{ 'border-rose-400': erroresValidacion.direccion_mac }" />
+          <p v-if="erroresValidacion.direccion_mac" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.direccion_mac }}</p>
+        </div>
+
+        <!-- Datos del propietario (solo si NO es institucional) -->
         <div v-if="!esInstitucional" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1">Propietario *</label>
@@ -467,6 +495,7 @@ async function exportarPDF() {
             <select v-model="form.tipo_personal" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm">
               <option value="docente">Docente</option>
               <option value="administrativo">Administrativo</option>
+              <option value="vigilante">Vigilante</option>
               <option value="obrero">Obrero</option>
             </select>
           </div>
@@ -482,12 +511,12 @@ async function exportarPDF() {
             <input type="checkbox" v-model="tieneMasDispositivos" class="w-5 h-5 text-blue-600 rounded" />
             <div>
               <span class="text-sm font-bold text-blue-800">Registrar MAC de otro dispositivo</span>
-              <p class="text-xs text-blue-600 mt-0.5">Marca si este usuario tiene múltiples dispositivos.</p>
+              <p class="text-xs text-blue-600 mt-0.5">Laptops, tablets, celulares, etc.</p>
             </div>
           </label>
         </div>
 
-        <!--  Sección de dispositivos adicionales -->
+        <!-- Sección de dispositivos adicionales -->
         <div v-if="tieneMasDispositivos" class="space-y-3">
           <div class="flex justify-between items-center">
             <h4 class="text-sm font-bold text-slate-700">Dispositivos Adicionales</h4>
@@ -541,6 +570,43 @@ async function exportarPDF() {
           <BaseButton type="submit" variant="primary" :loading="guardando" class="w-full sm:w-auto">Guardar</BaseButton>
         </div>
       </form>
+    </BaseModal>
+
+    <!-- NUEVO: Modal de Detalles -->
+    <BaseModal :open="modalDetalleAbierto" title="Detalle de Dispositivo" size="md" @close="modalDetalleAbierto = false">
+      <div v-if="dispositivoDetalle" class="space-y-4">
+        <!-- Equipo principal -->
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
+          <h4 class="text-sm font-bold text-blue-800 mb-3">Equipo Principal</h4>
+          <div class="space-y-2 text-sm">
+            <p><span class="font-bold text-slate-600">Nombre:</span> {{ dispositivoDetalle.nombre || '—' }}</p>
+            <p><span class="font-bold text-slate-600">Marca:</span> {{ dispositivoDetalle.marca }}</p>
+            <p><span class="font-bold text-slate-600">Modelo:</span> {{ dispositivoDetalle.modelo }}</p>
+            <p><span class="font-bold text-slate-600">MAC:</span> <span class="font-mono">{{ dispositivoDetalle.direccion_mac }}</span></p>
+            <p><span class="font-bold text-slate-600">Propietario:</span> {{ dispositivoDetalle.propietario }}</p>
+            <p><span class="font-bold text-slate-600">Tipo:</span> {{ dispositivoDetalle.tipo_personal }}</p>
+          </div>
+        </div>
+
+        <!-- Dispositivos adicionales -->
+        <div>
+          <h4 class="text-sm font-bold text-slate-700 mb-3">Dispositivos Adicionales ({{ dispositivosDetalleAdicionales.length }})</h4>
+          
+          <div v-if="cargandoDetalle" class="text-center py-4 text-slate-500">Cargando...</div>
+          
+          <div v-else-if="dispositivosDetalleAdicionales.length === 0" class="text-sm text-slate-500 text-center py-4 border border-dashed border-slate-200 rounded-lg">
+            Sin dispositivos adicionales registrados.
+          </div>
+          
+          <div v-else class="space-y-2">
+            <div v-for="d in dispositivosDetalleAdicionales" :key="d.id" class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <p class="font-bold text-slate-800">{{ d.nombre_dispositivo }}</p>
+              <p class="text-xs text-slate-500">{{ d.marca }} {{ d.modelo }} · {{ d.tipo_dispositivo }}</p>
+              <p class="text-xs font-mono text-slate-600 mt-1">MAC: {{ d.direccion_mac }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </BaseModal>
 
     <!-- Modal Confirmación -->
