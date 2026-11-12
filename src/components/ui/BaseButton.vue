@@ -21,26 +21,29 @@ const props = defineProps({
 const emit = defineEmits(['click'])
 
 const classes = computed(() => {
-  const base = 'inline-flex items-center justify-center gap-2 font-bold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+  const base = 'inline-flex items-center justify-center gap-2 font-bold rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#001e2b] disabled:opacity-50 disabled:cursor-not-allowed'
+  
   const sizes = {
-    sm: 'px-3 py-1.5 text-xs',
-    md: 'px-4 py-2 text-sm',
-    lg: 'px-5 py-2.5 text-base',
+    sm: 'px-4 py-2 text-xs',
+    md: 'px-6 py-2.5 text-sm',
+    lg: 'px-8 py-3 text-base',
   }
+  
   const variants = {
-    // Registro / Guardar (Verde)
-    primary: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-500/30 focus:ring-emerald-400',
-    // Modificar / Editar (Azul)
-    secondary: 'bg-blue-500 hover:bg-blue-600 text-white shadow-sm shadow-blue-500/30 focus:ring-blue-400',
-    // Eliminar (Rojo)
-    danger: 'bg-rose-500 hover:bg-rose-600 text-white shadow-sm shadow-rose-500/30 focus:ring-rose-400',
-    // Advertencia (Ámbar)
-    warning: 'bg-amber-400 hover:bg-amber-500 text-amber-950 shadow-sm focus:ring-amber-300',
-    // Cancelar / Volver (Gris suave)
-    cancel: 'bg-slate-100 hover:bg-slate-200 text-slate-600 focus:ring-slate-300',
-    // Ghost
-    ghost: 'bg-transparent hover:bg-blue-50 text-blue-600 focus:ring-blue-400',
+    // Verde Neón - acción principal
+    primary: 'bg-[#00ed64] hover:bg-[#00ed64]/90 text-[#001e2b] focus:ring-[#00ed64]/50',
+    // Secundario (outline) - acción secundaria
+    secondary: 'bg-transparent border border-[#5c6c75] hover:border-[#00ed64] hover:text-[#00ed64] text-[#b8c4c2] focus:ring-[#00ed64]/50',
+    // Rojo - destructiva
+    danger: 'bg-red-500/20 border border-red-500/40 hover:bg-red-500/30 text-red-400 focus:ring-red-500/50',
+    // Ámbar - advertencia
+    warning: 'bg-amber-500/20 border border-amber-500/40 hover:bg-amber-500/30 text-amber-400 focus:ring-amber-500/50',
+    // Ghost - terciaria
+    ghost: 'bg-transparent hover:bg-[#00ed64]/10 text-[#b8c4c2] hover:text-[#00ed64] focus:ring-[#00ed64]/50',
+    // Cancelar - gris
+    cancel: 'bg-[#5c6c75]/20 border border-[#5c6c75]/40 hover:bg-[#5c6c75]/30 text-[#b8c4c2] focus:ring-[#5c6c75]/50',
   }
+  
   return [base, sizes[props.size], variants[props.variant], props.block ? 'w-full' : ''].join(' ')
 })
 

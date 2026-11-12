@@ -56,23 +56,27 @@ function formatearFecha(fechaISO) {
       </p>
     </div>
 
-    <!-- Tarjetas de Totales -->
+        <!-- Tarjetas de Totales -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
-        <p class="text-xs uppercase text-slate-400 font-bold tracking-wider">Ultimo 5 Registros</p>
-        <p class="text-4xl font-bold mt-2 text-slate-800">{{ totales.total }}</p>
+      <!-- Total -->
+      <div class="bg-[#001e2b] border border-[#00684a]/50 rounded-2xl p-6">
+        <p class="text-xs uppercase text-[#5c6c75] font-mono tracking-wider">Total Equipos</p>
+        <p class="text-4xl font-bold mt-2 text-white">{{ totales.total }}</p>
       </div>
-      <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 shadow-sm">
-        <p class="text-xs uppercase text-emerald-600 font-bold tracking-wider">Activos</p>
-        <p class="text-4xl font-bold mt-2 text-emerald-700">{{ totales.activo }}</p>
+      <!-- Activos -->
+      <div class="bg-[#001e2b] border border-[#00ed64]/30 rounded-2xl p-6">
+        <p class="text-xs uppercase text-[#00ed64] font-mono tracking-wider">Activos</p>
+        <p class="text-4xl font-bold mt-2 text-[#00ed64]">{{ totales.activo }}</p>
       </div>
-      <div class="bg-amber-50 border border-amber-100 rounded-2xl p-6 shadow-sm">
-        <p class="text-xs uppercase text-amber-600 font-bold tracking-wider">En Reparación</p>
-        <p class="text-4xl font-bold mt-2 text-amber-700">{{ totales.reparacion }}</p>
+      <!-- Reparación -->
+      <div class="bg-[#001e2b] border border-amber-500/30 rounded-2xl p-6">
+        <p class="text-xs uppercase text-amber-400 font-mono tracking-wider">En Reparación</p>
+        <p class="text-4xl font-bold mt-2 text-amber-400">{{ totales.reparacion }}</p>
       </div>
-      <div class="bg-rose-50 border border-rose-100 rounded-2xl p-6 shadow-sm">
-        <p class="text-xs uppercase text-rose-600 font-bold tracking-wider">De Baja</p>
-        <p class="text-4xl font-bold mt-2 text-rose-700">{{ totales.baja }}</p>
+      <!-- Baja -->
+      <div class="bg-[#001e2b] border border-red-500/30 rounded-2xl p-6">
+        <p class="text-xs uppercase text-red-400 font-mono tracking-wider">De Baja</p>
+        <p class="text-4xl font-bold mt-2 text-red-400">{{ totales.baja }}</p>
       </div>
     </div>
 
