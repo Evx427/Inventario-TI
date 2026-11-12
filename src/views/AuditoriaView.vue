@@ -19,7 +19,6 @@ onMounted(async () => {
   ])
 })
 
-// Refrescar desde la primera página cuando cambian los filtros
 async function aplicarFiltros() {
   await listar(filtros.value, 1)
 }
@@ -29,10 +28,8 @@ function limpiarFiltros() {
   listar(filtros.value, 1)
 }
 
-// Cálculo de páginas totales
 const totalPaginas = computed(() => Math.ceil(totalRegistros.value / registrosPorPagina))
 
-// Cambiar de página
 async function cambiarPagina(nuevaPagina) {
   if (nuevaPagina < 1 || nuevaPagina > totalPaginas.value) return
   await irAPagina(nuevaPagina, filtros.value)
@@ -47,55 +44,48 @@ function formatearFecha(fechaISO) {
 }
 
 function colorResultado(r) {
-  if (r === 'exito') return 'bg-emerald-50 text-emerald-600 border-emerald-200'
-  if (r === 'denegado') return 'bg-rose-50 text-rose-600 border-rose-200'
-  return 'bg-slate-50 text-slate-600 border-slate-200'
+  if (r === 'exito') return 'bg-[#00ed64]/10 text-[#00ed64] border-[#00ed64]/30'
+  if (r === 'denegado') return 'bg-red-500/10 text-red-400 border-red-500/30'
+  return 'bg-[#5c6c75]/20 text-[#b8c4c2] border-[#5c6c75]/30'
 }
 
-const accionesDisponibles = computed(() => {
-  // En lugar de calcular sobre los 10 registros actuales,
-  // aquí podrías traer una lista fija o dejar las más comunes.
-  // Para simplificar, usamos un listado fijo de acciones comunes.
-  return [
-    'LOGIN', 'LOGOUT', 'LOGIN_FALLIDO', 'INSERT', 'UPDATE', 'DELETE',
-    'DELETE_EQUIPO_DENEGADO', 'DELETE_CATEGORIA_DENEGADO', 'CAMBIO_ROL'
-  ]
-})
+const accionesDisponibles = [
+  'LOGIN', 'LOGOUT', 'LOGIN_FALLIDO', 'INSERT', 'UPDATE', 'DELETE',
+  'DELETE_EQUIPO_DENEGADO', 'DELETE_CATEGORIA_DENEGADO', 'CAMBIO_ROL'
+]
 </script>
 
 <template>
   <div class="space-y-6">
     <!-- Encabezado -->
     <div>
-      <h1 class="text-2xl font-bold text-slate-800">Auditoría del Sistema</h1>
-      <p class="text-sm text-slate-500 mt-1">
-        Registro completo de todas las acciones realizadas en el sistema.
-      </p>
+      <h1 class="text-2xl font-bold text-white">Auditoría del Sistema</h1>
+      <p class="text-sm text-[#b8c4c2] mt-1">Registro completo de todas las acciones realizadas en el sistema.</p>
     </div>
 
     <!-- Tarjetas de usuarios -->
-    <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm">
-      <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">
+    <div class="bg-[#001e2b] border border-[#00684a]/30 rounded-2xl p-6 shadow-lg shadow-black/20">
+      <h2 class="text-sm font-bold text-white uppercase tracking-wide mb-4 font-mono">
         Usuarios del Sistema ({{ usuarios.length }})
       </h2>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div 
           v-for="u in usuarios" 
           :key="u.id"
-          class="bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-center gap-3"
+          class="bg-[#002b3b] border border-[#00684a]/30 rounded-xl p-4 flex items-center gap-3"
         >
-          <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg shrink-0">
+          <div class="w-12 h-12 rounded-full bg-[#00ed64]/20 border border-[#00ed64]/50 text-[#00ed64] flex items-center justify-center font-bold text-lg shrink-0">
             {{ u.nombre_completo?.charAt(0) || u.email?.charAt(0) || 'U' }}
           </div>
           <div class="flex-1 min-w-0">
-            <p class="font-bold text-slate-800 truncate">{{ u.nombre_completo || 'Sin nombre' }}</p>
-            <p class="text-xs text-slate-500 truncate">{{ u.email }}</p>
+            <p class="font-bold text-white truncate">{{ u.nombre_completo || 'Sin nombre' }}</p>
+            <p class="text-xs text-[#b8c4c2] truncate">{{ u.email }}</p>
             <div class="flex items-center gap-2 mt-1">
-              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded border"
-                :class="u.roles?.nombre === 'SuperUsuario' ? 'bg-violet-50 text-violet-600 border-violet-200' : u.roles?.nombre === 'Usuario' ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-slate-100 text-slate-500 border-slate-200'">
+              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border"
+                :class="u.roles?.nombre === 'SuperUsuario' ? 'bg-violet-500/10 text-violet-400 border-violet-500/30' : u.roles?.nombre === 'Usuario' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' : 'bg-[#5c6c75]/20 text-[#b8c4c2] border-[#5c6c75]/30'">
                 {{ u.roles?.nombre }}
               </span>
-              <span class="text-[10px] font-semibold" :class="u.activo ? 'text-emerald-600' : 'text-slate-400'">
+              <span class="text-[10px] font-semibold" :class="u.activo ? 'text-[#00ed64]' : 'text-[#5c6c75]'">
                 {{ u.activo ? '● Activo' : '○ Inactivo' }}
               </span>
             </div>
@@ -107,37 +97,33 @@ const accionesDisponibles = computed(() => {
     <!-- Gráficos -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Velocímetro -->
-      <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm flex flex-col items-center">
-        <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4 self-start">
-          Alertas de Seguridad
-        </h2>
+      <div class="bg-[#001e2b] border border-[#00684a]/30 rounded-2xl p-6 shadow-lg shadow-black/20 flex flex-col items-center">
+        <h2 class="text-sm font-bold text-white uppercase tracking-wide mb-4 self-start font-mono">Alertas de Seguridad</h2>
         <VelocimetroDenegados 
           :valor="estadisticas.denegados" 
           :maximo="Math.max(estadisticas.denegados * 2, 10)" 
         />
         <div class="mt-4 w-full grid grid-cols-2 gap-2 text-center">
-          <div class="bg-emerald-50 rounded-lg p-2">
-            <p class="text-xl font-bold text-emerald-600">{{ estadisticas.exitosos }}</p>
-            <p class="text-[10px] font-bold text-emerald-500 uppercase">Exitosas</p>
+          <div class="bg-[#00ed64]/10 rounded-lg p-2 border border-[#00ed64]/30">
+            <p class="text-xl font-bold text-[#00ed64]">{{ estadisticas.exitosos }}</p>
+            <p class="text-[10px] font-bold text-[#00ed64] uppercase font-mono">Exitosas</p>
           </div>
-          <div class="bg-rose-50 rounded-lg p-2">
-            <p class="text-xl font-bold text-rose-600">{{ estadisticas.denegados }}</p>
-            <p class="text-[10px] font-bold text-rose-500 uppercase">Denegadas</p>
+          <div class="bg-red-500/10 rounded-lg p-2 border border-red-500/30">
+            <p class="text-xl font-bold text-red-400">{{ estadisticas.denegados }}</p>
+            <p class="text-[10px] font-bold text-red-400 uppercase font-mono">Denegadas</p>
           </div>
         </div>
       </div>
 
       <!-- Gráfico de transacciones -->
-      <div class="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm lg:col-span-2">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wide">
-            Transacciones por Acción
-          </h2>
-          <div class="flex gap-2 text-xs">
-            <span class="px-2 py-1 bg-blue-50 text-blue-600 rounded font-bold">
+      <div class="bg-[#001e2b] border border-[#00684a]/30 rounded-2xl p-6 shadow-lg shadow-black/20 lg:col-span-2">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h2 class="text-sm font-bold text-white uppercase tracking-wide font-mono">Transacciones por Acción</h2>
+          <div class="flex gap-2 text-xs font-mono">
+            <span class="px-2 py-1 bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/30 font-bold">
               {{ estadisticas.logins }} Logins
             </span>
-            <span class="px-2 py-1 bg-slate-100 text-slate-600 rounded font-bold">
+            <span class="px-2 py-1 bg-[#5c6c75]/20 text-[#b8c4c2] rounded-full border border-[#5c6c75]/30 font-bold">
               {{ estadisticas.logouts }} Logouts
             </span>
           </div>
@@ -147,118 +133,78 @@ const accionesDisponibles = computed(() => {
     </div>
 
     <!-- Filtros -->
-    <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+    <div class="bg-[#001e2b] border border-[#00684a]/30 rounded-2xl p-4 shadow-lg shadow-black/20">
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
         <input
           v-model="filtros.usuario_email"
           placeholder="Buscar por correo..."
-          class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
+          class="bg-[#002b3b] border border-[#00684a]/50 rounded-full px-4 py-2.5 text-sm text-white placeholder-[#5c6c75] focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50"
           @input="aplicarFiltros"
         />
-        <select
-          v-model="filtros.accion"
-          class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-          @change="aplicarFiltros"
-        >
+        <select v-model="filtros.accion" class="bg-[#002b3b] border border-[#00684a]/50 rounded-full px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" @change="aplicarFiltros">
           <option value="">Todas las acciones</option>
-          <option v-for="a in accionesDisponibles" :key="a" :value="a">
-            {{ traducirAccion(a) }}
-          </option>
+          <option v-for="a in accionesDisponibles" :key="a" :value="a">{{ traducirAccion(a) }}</option>
         </select>
-        <select
-          v-model="filtros.resultado"
-          class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition"
-          @change="aplicarFiltros"
-        >
+        <select v-model="filtros.resultado" class="bg-[#002b3b] border border-[#00684a]/50 rounded-full px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" @change="aplicarFiltros">
           <option value="">Todos los resultados</option>
           <option value="exito">Exitosas</option>
           <option value="denegado">Denegadas</option>
         </select>
-        <button
-          class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl px-4 py-2.5 text-sm transition"
-          @click="limpiarFiltros"
-        >
+        <button class="bg-[#5c6c75]/20 hover:bg-[#5c6c75]/30 text-[#b8c4c2] font-bold rounded-full px-4 py-2.5 text-sm transition border border-[#5c6c75]/30" @click="limpiarFiltros">
           Limpiar filtros
         </button>
       </div>
     </div>
 
     <!-- Tabla -->
-    <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-sm flex flex-col">
-      <div v-if="cargando" class="p-8 text-center text-slate-500 animate-pulse">Cargando registros...</div>
-
-      <div v-else-if="registros.length === 0" class="p-8 text-center text-slate-400">
-        No hay registros de auditoría.
-      </div>
+    <div class="bg-[#001e2b] border border-[#00684a]/30 rounded-2xl overflow-hidden shadow-lg shadow-black/20">
+      <div v-if="cargando" class="p-8 text-center text-[#b8c4c2] animate-pulse">Cargando registros...</div>
+      <div v-else-if="registros.length === 0" class="p-8 text-center text-[#5c6c75]">No hay registros de auditoría.</div>
 
       <div v-else class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-50 text-slate-500 text-left text-xs uppercase font-bold">
+        <table class="w-full text-sm min-w-[900px]">
+          <thead class="bg-[#002b3b] text-[#b8c4c2] text-left text-xs uppercase font-mono tracking-wider border-b border-[#00684a]/30">
             <tr>
-              <th class="px-4 py-4">Fecha y Hora</th>
-              <th class="px-4 py-4">Usuario</th>
-              <th class="px-4 py-4">Acción</th>
-              <th class="px-4 py-4">Resultado</th>
-              <th class="px-4 py-4">IP</th>
-              <th class="px-4 py-4">Registro</th>
+              <th class="px-6 py-4 font-bold">Fecha y Hora</th>
+              <th class="px-6 py-4 font-bold">Usuario</th>
+              <th class="px-6 py-4 font-bold">Acción</th>
+              <th class="px-6 py-4 font-bold">Resultado</th>
+              <th class="px-6 py-4 font-bold">IP</th>
+              <th class="px-6 py-4 font-bold">Registro</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr v-for="r in registros" :key="r.id" class="hover:bg-blue-50/30 transition-colors">
-              <td class="px-4 py-3 text-xs font-medium text-slate-600 whitespace-nowrap">
-                {{ formatearFecha(r.fecha) }}
+          <tbody class="divide-y divide-[#00684a]/20">
+            <tr v-for="r in registros" :key="r.id" class="hover:bg-[#00ed64]/5 transition-colors">
+              <td class="px-6 py-4 text-xs text-[#b8c4c2] font-mono whitespace-nowrap">{{ formatearFecha(r.fecha) }}</td>
+              <td class="px-6 py-4">
+                <p class="font-semibold text-white text-xs">{{ r.usuario_email || '—' }}</p>
               </td>
-              <td class="px-4 py-3">
-                <p class="font-semibold text-slate-800 text-xs">{{ r.usuario_email || '—' }}</p>
+              <td class="px-6 py-4">
+                <span class="font-bold text-[#b8c4c2] text-xs">{{ traducirAccion(r.accion) }}</span>
               </td>
-              <td class="px-4 py-3">
-                <span class="font-bold text-slate-700 text-xs">
-                  {{ traducirAccion(r.accion) }}
-                </span>
-              </td>
-              <td class="px-4 py-3">
-                <span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border"
-                  :class="colorResultado(r.resultado)">
+              <td class="px-6 py-4">
+                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase border" :class="colorResultado(r.resultado)">
                   {{ r.resultado }}
                 </span>
               </td>
-              <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ r.ip || '—' }}</td>
-              <td class="px-4 py-3 font-mono text-xs text-slate-500">{{ r.registro_id || '—' }}</td>
+              <td class="px-6 py-4 font-mono text-xs text-[#5c6c75]">{{ r.ip || '—' }}</td>
+              <td class="px-6 py-4 font-mono text-xs text-[#5c6c75]">{{ r.registro_id || '—' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <!-- Paginación -->
-      <div v-if="totalPaginas > 1" class="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-        <p class="text-xs font-medium text-slate-500">
-          Mostrando <span class="font-bold text-slate-700">{{ (paginaActual - 1) * registrosPorPagina + 1 }}</span> 
-          a 
-          <span class="font-bold text-slate-700">{{ Math.min(paginaActual * registrosPorPagina, totalRegistros) }}</span> 
-          de <span class="font-bold text-slate-700">{{ totalRegistros }}</span> registros
+      <div v-if="totalPaginas > 1" class="px-6 py-4 border-t border-[#00684a]/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-xs font-mono text-[#b8c4c2]">
+          Mostrando <span class="font-bold text-white">{{ (paginaActual - 1) * registrosPorPagina + 1 }}</span> 
+          a <span class="font-bold text-white">{{ Math.min(paginaActual * registrosPorPagina, totalRegistros) }}</span> 
+          de <span class="font-bold text-white">{{ totalRegistros }}</span> registros
         </p>
         <div class="flex items-center gap-2">
-          <button
-            :disabled="paginaActual === 1"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border"
-            :class="paginaActual === 1 ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
-            @click="cambiarPagina(paginaActual - 1)"
-          >
-            Anterior
-          </button>
-          
-          <span class="text-xs font-bold text-slate-700 px-2">
-            Página {{ paginaActual }} de {{ totalPaginas }}
-          </span>
-
-          <button
-            :disabled="paginaActual === totalPaginas"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border"
-            :class="paginaActual === totalPaginas ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
-            @click="cambiarPagina(paginaActual + 1)"
-          >
-            Siguiente
-          </button>
+          <button :disabled="paginaActual === 1" class="px-4 py-1.5 rounded-full text-xs font-bold border" :class="paginaActual === 1 ? 'bg-[#5c6c75]/20 text-[#5c6c75] border-[#5c6c75]/30 cursor-not-allowed' : 'bg-transparent text-white border-[#5c6c75] hover:border-[#00ed64] hover:text-[#00ed64]'" @click="cambiarPagina(paginaActual - 1)">Anterior</button>
+          <span class="text-xs font-mono font-bold text-[#00ed64] px-2">Página {{ paginaActual }} de {{ totalPaginas }}</span>
+          <button :disabled="paginaActual === totalPaginas" class="px-4 py-1.5 rounded-full text-xs font-bold border" :class="paginaActual === totalPaginas ? 'bg-[#5c6c75]/20 text-[#5c6c75] border-[#5c6c75]/30 cursor-not-allowed' : 'bg-transparent text-white border-[#5c6c75] hover:border-[#00ed64] hover:text-[#00ed64]'" @click="cambiarPagina(paginaActual + 1)">Siguiente</button>
         </div>
       </div>
     </div>

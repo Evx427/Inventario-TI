@@ -10,12 +10,12 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'editar'])
 
-// Filtrar hardware por tipo
 const placa = computed(() => props.equipo?.hardware?.find(h => h.tipo === 'placa_base'))
 const rams = computed(() => props.equipo?.hardware?.filter(h => h.tipo === 'ram') || [])
 const discos = computed(() => props.equipo?.hardware?.filter(h => h.tipo === 'almacenamiento') || [])
 const gpu = computed(() => props.equipo?.hardware?.find(h => h.tipo === 'gpu'))
 const red = computed(() => props.equipo?.hardware?.find(h => h.tipo === 'red'))
+const perifericos = computed(() => props.equipo?.perifericos || [])
 
 function formatearFecha(fechaISO) {
   if (!fechaISO) return '—'
@@ -27,48 +27,48 @@ function formatearFecha(fechaISO) {
   <Teleport to="body">
     <div
       v-if="open && equipo"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-sm"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       @click.self="emit('close')"
     >
-      <div class="bg-white rounded-2xl w-full max-w-3xl flex flex-col max-h-[90vh] shadow-2xl border border-slate-100">
+      <div class="bg-[#001e2b] border border-[#00684a]/50 rounded-2xl w-full max-w-3xl flex flex-col max-h-[90vh] shadow-2xl shadow-black/50">
         
         <!-- Cabecera -->
-        <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50 rounded-t-2xl">
+        <div class="flex items-center justify-between px-6 py-5 border-b border-[#00684a]/30 bg-[#002b3b] rounded-t-2xl">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg">
+            <div class="w-10 h-10 rounded-full bg-[#00ed64]/20 text-[#00ed64] border border-[#00ed64]/50 flex items-center justify-center font-bold text-lg">
               💻
             </div>
             <div>
-              <h2 class="text-lg font-bold text-slate-800">Detalles del Equipo</h2>
-              <p class="text-xs font-semibold text-slate-500">Código: {{ equipo.codigo_bien_publico }}</p>
+              <h2 class="text-lg font-bold text-white">Detalles del Equipo</h2>
+              <p class="text-xs font-mono text-[#00ed64]">Código: {{ equipo.codigo_bien_publico }}</p>
             </div>
           </div>
-          <button class="text-slate-400 hover:text-slate-700 transition text-xl leading-none bg-white hover:bg-slate-100 w-8 h-8 rounded-full flex items-center justify-center border border-slate-200" @click="emit('close')">
+          <button class="text-[#b8c4c2] hover:text-[#00ed64] transition text-xl leading-none w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#00ed64]/10" @click="emit('close')">
             ✕
           </button>
         </div>
 
-        <!-- Cuerpo scrolleable -->
+        <!-- Cuerpo -->
         <div class="p-6 overflow-y-auto flex-1 space-y-6">
           
-          <!-- Identificación y Datos -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Identificación -->
             <div class="space-y-3">
-              <h3 class="text-xs font-bold text-blue-500 uppercase tracking-wider border-b border-blue-100 pb-1">Identificación</h3>
+              <h3 class="text-xs font-bold text-[#00ed64] uppercase tracking-wider font-mono border-b border-[#00684a]/30 pb-1">Identificación</h3>
               <div class="grid grid-cols-2 gap-2 text-sm">
-                <span class="text-slate-500 font-medium">Cód. Público:</span>
-                <span class="font-bold text-slate-800">{{ equipo.codigo_bien_publico }}</span>
-                <span class="text-slate-500 font-medium">Cód. Privado:</span>
-                <span class="font-semibold text-slate-700">{{ equipo.codigo_bien_privado || '—' }}</span>
-                <span class="text-slate-500 font-medium">Categoría:</span>
-                <span class="font-semibold text-slate-700">{{ equipo.categorias?.nombre || '—' }}</span>
-                <span class="text-slate-500 font-medium">Estado:</span>
+                <span class="text-[#5c6c75] font-medium">Cód. Público:</span>
+                <span class="font-bold text-white">{{ equipo.codigo_bien_publico }}</span>
+                <span class="text-[#5c6c75] font-medium">Cód. Privado:</span>
+                <span class="font-semibold text-[#b8c4c2]">{{ equipo.codigo_bien_privado || '—' }}</span>
+                <span class="text-[#5c6c75] font-medium">Categoría:</span>
+                <span class="font-semibold text-[#b8c4c2]">{{ equipo.categorias?.nombre || '—' }}</span>
+                <span class="text-[#5c6c75] font-medium">Estado:</span>
                 <span>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border"
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border"
                     :class="{
-                      'bg-emerald-50 text-emerald-600 border-emerald-200': equipo.estado === 'activo',
-                      'bg-amber-50 text-amber-600 border-amber-200': equipo.estado === 'reparacion',
-                      'bg-rose-50 text-rose-600 border-rose-200': equipo.estado === 'baja',
+                      'bg-[#00ed64]/10 text-[#00ed64] border-[#00ed64]/30': equipo.estado === 'activo',
+                      'bg-amber-500/10 text-amber-400 border-amber-500/30': equipo.estado === 'reparacion',
+                      'bg-red-500/10 text-red-400 border-red-500/30': equipo.estado === 'baja',
                     }">
                     {{ equipo.estado }}
                   </span>
@@ -76,108 +76,104 @@ function formatearFecha(fechaISO) {
               </div>
             </div>
 
+            <!-- Datos -->
             <div class="space-y-3">
-              <h3 class="text-xs font-bold text-blue-500 uppercase tracking-wider border-b border-blue-100 pb-1">Datos del Equipo</h3>
+              <h3 class="text-xs font-bold text-[#00ed64] uppercase tracking-wider font-mono border-b border-[#00684a]/30 pb-1">Datos del Equipo</h3>
               <div class="grid grid-cols-2 gap-2 text-sm">
-                <span class="text-slate-500 font-medium">Marca:</span>
-                <span class="font-semibold text-slate-700">{{ equipo.marca || '—' }}</span>
-                <span class="text-slate-500 font-medium">Modelo:</span>
-                <span class="font-semibold text-slate-700">{{ equipo.modelo || '—' }}</span>
-                <span class="text-slate-500 font-medium">N° Serie:</span>
-                <span class="font-mono text-xs font-semibold text-slate-700">{{ equipo.numero_serie || '—' }}</span>
-                <span class="text-slate-500 font-medium">F. Registro:</span>
-                <span class="font-semibold text-slate-700">{{ formatearFecha(equipo.fecha_registro) }}</span>
-                <span class="text-slate-500 font-medium">F. Fabricación:</span>
-                <span class="font-semibold text-slate-700">{{ formatearFecha(equipo.fecha_fabricacion) }}</span>
-                <span class="text-slate-500 font-medium">Ubicación:</span>
-                <span class="font-semibold text-slate-700">{{ equipo.ubicacion || '—' }}</span>
+                <span class="text-[#5c6c75] font-medium">Marca:</span>
+                <span class="font-semibold text-[#b8c4c2]">{{ equipo.marca || '—' }}</span>
+                <span class="text-[#5c6c75] font-medium">Modelo:</span>
+                <span class="font-semibold text-[#b8c4c2]">{{ equipo.modelo || '—' }}</span>
+                <span class="text-[#5c6c75] font-medium">N° Serie:</span>
+                <span class="font-mono text-xs font-semibold text-[#b8c4c2]">{{ equipo.numero_serie || '—' }}</span>
+                <span class="text-[#5c6c75] font-medium">F. Registro:</span>
+                <span class="font-semibold text-[#b8c4c2]">{{ formatearFecha(equipo.fecha_registro) }}</span>
+                <span class="text-[#5c6c75] font-medium">Ubicación:</span>
+                <span class="font-semibold text-[#b8c4c2]">{{ equipo.ubicacion || '—' }}</span>
               </div>
             </div>
           </div>
 
           <!-- Notas -->
-          <div v-if="equipo.notas" class="bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm text-slate-600 italic">
+          <div v-if="equipo.notas" class="bg-[#002b3b] border border-[#00684a]/30 rounded-xl p-3 text-sm text-[#b8c4c2] italic">
             "{{ equipo.notas }}"
           </div>
 
-          <!-- Sistema Operativo (Solo si aplica) -->
-          <div v-if="equipo.so_id" class="space-y-3">
-            <h3 class="text-xs font-bold text-emerald-500 uppercase tracking-wider border-b border-emerald-100 pb-1">Sistema Operativo</h3>
-            <div class="bg-emerald-50/50 rounded-xl p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span class="block text-xs text-slate-500 font-medium">SO</span>
-                <span class="font-bold text-slate-800">{{ equipo.sistemas_operativos?.nombre || '—' }}</span>
+          <!-- Hardware -->
+          <div v-if="equipo.hardware && equipo.hardware.length > 0" class="space-y-3">
+            <h3 class="text-xs font-bold text-[#00ed64] uppercase tracking-wider font-mono border-b border-[#00684a]/30 pb-1">Hardware</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-if="placa" class="bg-[#002b3b] border border-[#00684a]/30 rounded-xl p-4 text-sm">
+                <h4 class="font-bold text-white mb-2">Placa Base</h4>
+                <div class="grid grid-cols-2 gap-2 text-[#b8c4c2]">
+                  <span class="text-[#5c6c75]">Marca:</span><span>{{ placa.marca || '—' }}</span>
+                  <span class="text-[#5c6c75]">Modelo:</span><span>{{ placa.modelo || '—' }}</span>
+                  <span class="text-[#5c6c75]">ID:</span><span class="font-mono text-xs">{{ placa.identificador || '—' }}</span>
+                </div>
               </div>
-              <div>
-                <span class="block text-xs text-slate-500 font-medium">Versión Exacta</span>
-                <span class="font-semibold text-slate-700">{{ equipo.so_version_exacta || '—' }}</span>
+
+              <div v-if="rams.length > 0" class="bg-[#002b3b] border border-[#00684a]/30 rounded-xl p-4 text-sm">
+                <h4 class="font-bold text-white mb-2">Memoria RAM</h4>
+                <ul class="space-y-1 text-[#b8c4c2]">
+                  <li v-for="(r, i) in rams" :key="i" class="flex justify-between border-b border-[#00684a]/20 pb-1 last:border-0">
+                    <span>{{ r.tipo_ram }}</span>
+                    <span class="font-bold">{{ r.cantidad_modulos }} módulo(s)</span>
+                  </li>
+                </ul>
               </div>
-              <div>
-                <span class="block text-xs text-slate-500 font-medium">Compilación</span>
-                <span class="font-semibold text-slate-700">{{ equipo.so_compilacion || '—' }}</span>
+
+              <div v-if="discos.length > 0" class="bg-[#002b3b] border border-[#00684a]/30 rounded-xl p-4 text-sm">
+                <h4 class="font-bold text-white mb-2">Almacenamiento</h4>
+                <ul class="space-y-1 text-[#b8c4c2]">
+                  <li v-for="(d, i) in discos" :key="i" class="flex justify-between border-b border-[#00684a]/20 pb-1 last:border-0">
+                    <span>{{ d.tipo_almacenamiento }}</span>
+                    <span class="font-bold">{{ d.capacidad_gb }} GB</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div v-if="gpu || red" class="bg-[#002b3b] border border-[#00684a]/30 rounded-xl p-4 text-sm space-y-3">
+                <div v-if="gpu">
+                  <h4 class="font-bold text-white mb-1">Tarjeta Gráfica</h4>
+                  <p class="text-[#b8c4c2]">{{ gpu.marca }} {{ gpu.modelo }}</p>
+                </div>
+                <div v-if="red" class="pt-2 border-t border-[#00684a]/20">
+                  <h4 class="font-bold text-white mb-1">Tarjeta de Red</h4>
+                  <p class="text-[#b8c4c2]">{{ red.marca }} {{ red.modelo }}</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Hardware (Solo si hay componentes) -->
-          <div v-if="equipo.hardware && equipo.hardware.length > 0" class="space-y-3">
-            <h3 class="text-xs font-bold text-amber-500 uppercase tracking-wider border-b border-amber-100 pb-1">Hardware</h3>
-            
+          <!-- Periféricos -->
+          <div v-if="perifericos.length > 0" class="space-y-3">
+            <h3 class="text-xs font-bold text-[#00ed64] uppercase tracking-wider font-mono border-b border-[#00684a]/30 pb-1">Periféricos Asociados</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              <!-- Placa Base -->
-              <div v-if="placa" class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm">
-                <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-2"><span class="text-lg">🔲</span> Placa Base</h4>
-                <div class="grid grid-cols-2 gap-2">
-                  <span class="text-slate-500">Marca:</span><span class="font-medium text-slate-800">{{ placa.marca || '—' }}</span>
-                  <span class="text-slate-500">Modelo:</span><span class="font-medium text-slate-800">{{ placa.modelo || '—' }}</span>
-                  <span class="text-slate-500">ID/Código:</span><span class="font-mono text-xs font-medium text-slate-800">{{ placa.identificador || '—' }}</span>
+              <div v-for="p in perifericos" :key="p.id" class="bg-[#002b3b] border border-[#00684a]/30 rounded-xl p-4 text-sm">
+                <div class="flex justify-between items-center mb-2">
+                  <h4 class="font-bold text-white capitalize">{{ p.tipo }}</h4>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border"
+                    :class="{
+                      'bg-[#00ed64]/10 text-[#00ed64] border-[#00ed64]/30': p.estado === 'bueno',
+                      'bg-amber-500/10 text-amber-400 border-amber-500/30': p.estado === 'medio',
+                      'bg-red-500/10 text-red-400 border-red-500/30': p.estado === 'malo',
+                    }">
+                    {{ p.estado }}
+                  </span>
                 </div>
+                <p class="text-[#b8c4c2]">{{ p.marca }} {{ p.modelo }}</p>
+                <p v-if="p.conexion_video" class="text-xs text-[#5c6c75] mt-1 font-mono">Conexión: {{ p.conexion_video }}</p>
               </div>
-
-              <!-- RAM -->
-              <div v-if="rams.length > 0" class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm">
-                <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-2"><span class="text-lg">🧠</span> Memoria RAM</h4>
-                <ul class="space-y-1">
-                  <li v-for="(r, i) in rams" :key="i" class="flex justify-between border-b border-slate-200/50 pb-1 last:border-0">
-                    <span class="text-slate-600">{{ r.tipo_ram }}</span>
-                    <span class="font-bold text-slate-800">{{ r.cantidad_modulos }} módulo(s)</span>
-                  </li>
-                </ul>
-              </div>
-
-              <!-- Almacenamiento -->
-              <div v-if="discos.length > 0" class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm">
-                <h4 class="font-bold text-slate-700 mb-2 flex items-center gap-2"><span class="text-lg">💾</span> Almacenamiento</h4>
-                <ul class="space-y-1">
-                  <li v-for="(d, i) in discos" :key="i" class="flex justify-between border-b border-slate-200/50 pb-1 last:border-0">
-                    <span class="text-slate-600">{{ d.tipo_almacenamiento }}</span>
-                    <span class="font-bold text-slate-800">{{ d.capacidad_gb }} GB</span>
-                  </li>
-                </ul>
-              </div>
-
-              <!-- GPU y Red -->
-              <div v-if="gpu || red" class="bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm space-y-3">
-                <div v-if="gpu">
-                  <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-2"><span class="text-lg">🎮</span> Tarjeta Gráfica</h4>
-                  <p class="text-slate-600">{{ gpu.marca }} {{ gpu.modelo }}</p>
-                </div>
-                <div v-if="red" class="pt-2 border-t border-slate-200/50">
-                  <h4 class="font-bold text-slate-700 mb-1 flex items-center gap-2"><span class="text-lg">📡</span> Tarjeta de Red</h4>
-                  <p class="text-slate-600">{{ red.marca }} {{ red.modelo }}</p>
-                </div>
-              </div>
-
             </div>
           </div>
 
         </div>
 
-        <!-- Footer con acciones -->
-        <div class="px-6 py-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50 rounded-b-2xl">
+        <!-- Footer -->
+        <div class="px-6 py-4 border-t border-[#00684a]/30 flex justify-end gap-3 bg-[#002b3b] rounded-b-2xl">
           <BaseButton variant="cancel" @click="emit('close')">Cerrar</BaseButton>
-          <BaseButton v-if="$attrs.puedeEditar" variant="secondary" @click="emit('editar', equipo)">Editar Datos</BaseButton>
+          <BaseButton v-if="puedeEditar" variant="secondary" @click="emit('editar', equipo)">Editar Datos</BaseButton>
         </div>
       </div>
     </div>

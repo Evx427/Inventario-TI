@@ -15,11 +15,10 @@ const roles = ref([])
 const modalAbierto = ref(false)
 const guardando = ref(false)
 
-// Formulario de invitación
 const form = ref({
   email: '',
   nombre_completo: '',
-  rol_id: 2, // Usuario por defecto
+  rol_id: 2,
 })
 
 onMounted(async () => {
@@ -39,7 +38,6 @@ async function onInvitar() {
     return
   }
 
-  // Validación básica de email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(form.value.email)) {
     toast.advertencia('Ingresa un correo válido.')
@@ -47,11 +45,7 @@ async function onInvitar() {
   }
 
   guardando.value = true
-  const res = await invitarUsuario(
-    form.value.email,
-    form.value.nombre_completo,
-    form.value.rol_id
-  )
+  const res = await invitarUsuario(form.value.email, form.value.nombre_completo, form.value.rol_id)
   guardando.value = false
 
   if (res.ok) {
@@ -115,156 +109,116 @@ async function eliminarUsuarioConfirm(usuario) {
 function formatearFecha(fechaISO) {
   if (!fechaISO) return '—'
   return new Date(fechaISO).toLocaleString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
   })
 }
 </script>
 
 <template>
-  <div>
-    <div class="flex items-center justify-between mb-6">
+  <div class="space-y-6">
+    <!-- Encabezado -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-slate-800">Administración de Usuarios</h1>
-        <p class="text-sm text-slate-500 mt-1">
-          Gestiona los roles y el acceso de los usuarios del sistema.
-        </p>
+        <h1 class="text-2xl font-bold text-white">Administración de Usuarios</h1>
+        <p class="text-sm text-[#b8c4c2] mt-1">Gestiona los roles y el acceso de los usuarios del sistema.</p>
       </div>
-      <BaseButton variant="primary" @click="abrirInvitar">
+      <BaseButton variant="primary" @click="abrirInvitar" class="w-full sm:w-auto">
         + Invitar usuario
       </BaseButton>
     </div>
 
-    <div class="bg-white border border-orange-200 rounded-xl overflow-hidden shadow-sm overflow-x-auto">
-      <div v-if="cargando" class="p-8 text-center text-slate-500 animate-pulse">
-        Cargando usuarios...
+    <!-- Tabla -->
+    <div class="bg-[#001e2b] border border-[#00684a]/30 rounded-2xl overflow-hidden shadow-lg shadow-black/20">
+      <div v-if="cargando" class="p-8 text-center text-[#b8c4c2] animate-pulse">Cargando usuarios...</div>
+
+      <div v-else-if="usuarios.length > 0" class="overflow-x-auto">
+        <table class="w-full text-sm min-w-[900px]">
+          <thead class="bg-[#002b3b] text-[#b8c4c2] text-left text-xs uppercase font-mono tracking-wider border-b border-[#00684a]/30">
+            <tr>
+              <th class="px-6 py-4 font-bold">Usuario</th>
+              <th class="px-6 py-4 font-bold">Rol</th>
+              <th class="px-6 py-4 font-bold">Último acceso</th>
+              <th class="px-6 py-4 font-bold">Estado</th>
+              <th class="px-6 py-4 text-right font-bold">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#00684a]/20">
+            <tr v-for="u in usuarios" :key="u.id" class="hover:bg-[#00ed64]/5 transition-colors" :class="u.id === auth.user.id ? 'bg-[#00ed64]/5' : ''">
+              <td class="px-6 py-4">
+                <p class="font-bold text-white">
+                  {{ u.nombre_completo || 'Sin nombre' }}
+                  <span v-if="u.id === auth.user.id" class="text-xs text-[#00ed64] ml-2 font-mono">(Tú)</span>
+                </p>
+                <p class="text-xs text-[#5c6c75]">{{ u.email }}</p>
+              </td>
+              <td class="px-6 py-4">
+                <select
+                  :value="u.rol_id"
+                  :disabled="u.id === auth.user.id"
+                  class="bg-[#002b3b] border border-[#00684a]/50 rounded-full px-3 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50 disabled:opacity-50"
+                  @change="cambiarRol(u, $event.target.value)"
+                >
+                  <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.nombre }}</option>
+                </select>
+              </td>
+              <td class="px-6 py-4 text-xs text-[#b8c4c2] font-mono">{{ formatearFecha(u.last_login) }}</td>
+              <td class="px-6 py-4">
+                <span class="px-3 py-1 rounded-full text-[10px] font-bold uppercase border"
+                  :class="u.activo ? 'bg-[#00ed64]/10 text-[#00ed64] border-[#00ed64]/30' : 'bg-[#5c6c75]/20 text-[#5c6c75] border-[#5c6c75]/30'">
+                  {{ u.activo ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+              <td class="px-6 py-4 text-right">
+                <div class="inline-flex gap-2">
+                  <button
+                    :disabled="u.id === auth.user.id"
+                    class="text-xs px-3 py-1.5 rounded-full transition font-bold disabled:opacity-40"
+                    :class="u.activo ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30' : 'bg-[#00ed64]/20 text-[#00ed64] border border-[#00ed64]/30 hover:bg-[#00ed64]/30'"
+                    @click="toggleActivo(u)"
+                  >
+                    {{ u.activo ? 'Desactivar' : 'Activar' }}
+                  </button>
+                  <button
+                    :disabled="u.id === auth.user.id"
+                    class="text-xs px-3 py-1.5 rounded-full transition font-bold bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 disabled:opacity-40"
+                    @click="eliminarUsuarioConfirm(u)"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <table v-else-if="usuarios.length > 0" class="w-full text-sm min-w-[800px]">
-        <thead class="bg-orange-50 text-orange-900 text-left">
-          <tr>
-            <th class="px-4 py-3 font-semibold">Usuario</th>
-            <th class="px-4 py-3 font-semibold">Rol</th>
-            <th class="px-4 py-3 font-semibold">Último acceso</th>
-            <th class="px-4 py-3 font-semibold">Estado</th>
-            <th class="px-4 py-3 font-semibold text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-orange-100">
-          <tr
-            v-for="u in usuarios"
-            :key="u.id"
-            class="hover:bg-orange-50/50 transition"
-            :class="u.id === auth.user.id ? 'bg-orange-50/30' : ''"
-          >
-            <td class="px-4 py-3">
-              <p class="font-medium text-slate-800">
-                {{ u.nombre_completo || 'Sin nombre' }}
-                <span v-if="u.id === auth.user.id" class="text-xs text-orange-600 ml-2 font-normal">(Tú)</span>
-              </p>
-              <p class="text-xs text-slate-500">{{ u.email }}</p>
-            </td>
-            <td class="px-4 py-3">
-              <select
-                :value="u.rol_id"
-                :disabled="u.id === auth.user.id"
-                class="bg-white border border-orange-200 rounded px-2 py-1 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:opacity-50 transition"
-                @change="cambiarRol(u, $event.target.value)"
-              >
-                <option v-for="r in roles" :key="r.id" :value="r.id">
-                  {{ r.nombre }}
-                </option>
-              </select>
-            </td>
-            <td class="px-4 py-3 text-xs text-slate-600">
-              {{ formatearFecha(u.last_login) }}
-            </td>
-            <td class="px-4 py-3">
-              <span
-                class="px-2.5 py-1 rounded-md text-xs font-medium"
-                :class="u.activo
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : 'bg-slate-100 text-slate-600'"
-              >
-                {{ u.activo ? 'Activo' : 'Inactivo' }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-right">
-              <div class="inline-flex gap-2">
-                <button
-                  :disabled="u.id === auth.user.id"
-                  class="text-xs px-3 py-1.5 rounded-lg transition font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-                  :class="u.activo
-                    ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                    : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'"
-                  @click="toggleActivo(u)"
-                >
-                  {{ u.activo ? 'Desactivar' : 'Activar' }}
-                </button>
-                <button
-                  :disabled="u.id === auth.user.id"
-                  class="text-xs px-3 py-1.5 rounded-lg transition font-medium bg-rose-100 text-rose-700 hover:bg-rose-200 disabled:opacity-40 disabled:cursor-not-allowed"
-                  @click="eliminarUsuarioConfirm(u)"
-                >
-                  Eliminar
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div v-else class="p-8 text-center text-slate-500">
-        No hay usuarios registrados.
-      </div>
+      <div v-else class="p-8 text-center text-[#5c6c75]">No hay usuarios registrados.</div>
     </div>
 
-    <!-- Modal de Invitación -->
-    <BaseModal
-      :open="modalAbierto"
-      title="Invitar nuevo usuario"
-      size="md"
-      @close="modalAbierto = false"
-    >
+    <!-- Modal Invitar -->
+    <BaseModal :open="modalAbierto" title="Invitar nuevo usuario" size="md" @close="modalAbierto = false">
       <form class="space-y-4" @submit.prevent="onInvitar">
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Nombre completo *</label>
-          <input
-            v-model="form.nombre_completo"
-            required
-            placeholder="Ej: Juan Pérez"
-            class="w-full bg-white border border-orange-200 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition"
-          />
+          <label class="block text-sm font-bold text-[#b8c4c2] mb-1">Nombre completo *</label>
+          <input v-model="form.nombre_completo" required placeholder="Ej: Juan Pérez" class="w-full bg-[#002b3b] border border-[#00684a]/50 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#5c6c75] focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Correo electrónico *</label>
-          <input
-            v-model="form.email"
-            type="email"
-            required
-            placeholder="juan@correo.com"
-            class="w-full bg-white border border-orange-200 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition"
-          />
+          <label class="block text-sm font-bold text-[#b8c4c2] mb-1">Correo electrónico *</label>
+          <input v-model="form.email" type="email" required placeholder="juan@correo.com" class="w-full bg-[#002b3b] border border-[#00684a]/50 rounded-xl px-4 py-2.5 text-sm text-white placeholder-[#5c6c75] focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-slate-700 mb-1">Rol asignado *</label>
-          <select
-            v-model="form.rol_id"
-            required
-            class="w-full bg-white border border-orange-200 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition"
-          >
+          <label class="block text-sm font-bold text-[#b8c4c2] mb-1">Rol asignado *</label>
+          <select v-model="form.rol_id" required class="w-full bg-[#002b3b] border border-[#00684a]/50 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50">
             <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.nombre }}</option>
           </select>
         </div>
         
-        <p class="text-xs text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-100">
-          ℹ️ Se enviará un correo de invitación. El usuario deberá hacer clic en el enlace para establecer su contraseña y acceder al sistema.
+        <p class="text-xs text-[#5c6c75] bg-[#002b3b] p-3 rounded-xl border border-[#00684a]/30">
+          ℹ️ Se enviará un correo de invitación. El usuario deberá hacer clic en el enlace para establecer su contraseña.
         </p>
 
-        <div class="flex justify-end gap-2 pt-2">
+        <div class="flex justify-end gap-3 pt-2">
           <BaseButton variant="cancel" @click="modalAbierto = false">Cancelar</BaseButton>
           <BaseButton type="submit" variant="primary" :loading="guardando">Enviar invitación</BaseButton>
         </div>
