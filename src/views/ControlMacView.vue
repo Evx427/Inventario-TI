@@ -11,7 +11,23 @@ import autoTable from 'jspdf-autotable'
 
 const auth = useAuth()
 const toast = useNotificacionesStore()
-const { dispositivos, totalRegistros, cargando, listar, crear, actualizar, eliminar } = useControlMac()
+
+// ✅ Incluimos las nuevas funciones
+const { 
+  dispositivos, 
+  totalRegistros, 
+  cargando, 
+  listar, 
+  crear, 
+  actualizar, 
+  eliminar,
+  guardarDispositivosAdicionales,
+  obtenerDispositivosAdicionales 
+} = useControlMac()
+
+// Variables para dispositivos adicionales
+const tieneMasDispositivos = ref(false)
+const dispositivosAdicionales = ref([])
 
 const filtros = ref({ busqueda: '', tipo_personal: '' })
 const paginaActual = ref(1)
@@ -29,6 +45,7 @@ const esInstitucional = ref(false)
 
 function getFormVacio() {
   return {
+    nombre: '', 
     marca: '',
     modelo: '',
     direccion_mac: '',
@@ -61,44 +78,84 @@ function cambiarPagina(nuevaPagina) {
 function abrirCrear() {
   dispositivoEditando.value = null
   esInstitucional.value = false
+  tieneMasDispositivos.value = false
+  dispositivosAdicionales.value = []
   form.value = getFormVacio()
   erroresValidacion.value = {}
   modalAbierto.value = true
 }
 
-function abrirEditar(dispositivo) {
+async function abrirEditar(dispositivo) {
   dispositivoEditando.value = dispositivo
   form.value = { ...dispositivo }
   
-  // Si el propietario es la institución, se marca el checkbox
   if (dispositivo.propietario === 'Perteneciente a la UPTMA Ext. Villa del Rosario') {
     esInstitucional.value = true
   } else {
     esInstitucional.value = false
+  }
+
+  //  Cargar dispositivos adicionales
+  const resDis = await obtenerDispositivosAdicionales(dispositivo.id)
+  if (resDis.ok && resDis.data.length > 0) {
+    dispositivosAdicionales.value = resDis.data
+    tieneMasDispositivos.value = true
+  } else {
+    dispositivosAdicionales.value = []
+    tieneMasDispositivos.value = false
   }
   
   erroresValidacion.value = {}
   modalAbierto.value = true
 }
 
-// Formatear MAC 
+// Formatear MAC principal
 function formatearMAC(event) {
   let valor = event.target.value.replace(/[^A-Fa-f0-9]/g, '') 
   valor = valor.toUpperCase()
-  
   let formateado = ''
   for (let i = 0; i < valor.length && i < 12; i++) {
     if (i > 0 && i % 2 === 0) formateado += '-'
     formateado += valor[i]
   }
-  
   form.value.direccion_mac = formateado
+}
+
+// Formatear MAC de adicionales
+function formatearMACAdicional(event, index) {
+  let valor = event.target.value.replace(/[^A-Fa-f0-9]/g, '')
+  valor = valor.toUpperCase()
+  let formateado = ''
+  for (let i = 0; i < valor.length && i < 12; i++) {
+    if (i > 0 && i % 2 === 0) formateado += '-'
+    formateado += valor[i]
+  }
+  dispositivosAdicionales.value[index].direccion_mac = formateado
+}
+
+// Agregar / Eliminar adicionales
+function agregarDispositivoAdicional() {
+  dispositivosAdicionales.value.push({
+    nombre_dispositivo: '',
+    marca: '',
+    modelo: '',
+    direccion_mac: '',
+    tipo_dispositivo: 'laptop'
+  })
+}
+
+function eliminarDispositivoAdicional(index) {
+  dispositivosAdicionales.value.splice(index, 1)
 }
 
 function validar() {
   erroresValidacion.value = {}
   let valido = true
 
+  if (!form.value.nombre.trim()) {
+    erroresValidacion.value.nombre = 'El nombre del equipo es obligatorio.'
+    valido = false
+  }
   if (!form.value.marca.trim()) {
     erroresValidacion.value.marca = 'La marca es obligatoria.'
     valido = false
@@ -107,8 +164,6 @@ function validar() {
     erroresValidacion.value.modelo = 'El modelo es obligatorio.'
     valido = false
   }
-  
-  // Solo validamos el propietario si NO es institucional
   if (!esInstitucional.value && !form.value.propietario.trim()) {
     erroresValidacion.value.propietario = 'El propietario es obligatorio.'
     valido = false
@@ -119,8 +174,26 @@ function validar() {
     erroresValidacion.value.direccion_mac = 'La dirección MAC es obligatoria.'
     valido = false
   } else if (!macRegex.test(form.value.direccion_mac)) {
-    erroresValidacion.value.direccion_mac = 'El formato debe ser exactamente 12 caracteres hexadecimales (ej. AA-BB-CC-DD-EE-FF).'
+    erroresValidacion.value.direccion_mac = 'Formato inválido (ej. AA-BB-CC-DD-EE-FF).'
     valido = false
+  }
+
+  //  Validar adicionales si el checkbox está marcado
+  if (tieneMasDispositivos.value) {
+    if (dispositivosAdicionales.value.length === 0) {
+      erroresValidacion.value.dispositivos = 'Debes agregar al menos un dispositivo.'
+      valido = false
+    }
+    dispositivosAdicionales.value.forEach((d, i) => {
+      if (!d.nombre_dispositivo.trim()) {
+        erroresValidacion.value[`dispositivo_${i}`] = 'Nombre obligatorio.'
+        valido = false
+      }
+      if (!macRegex.test(d.direccion_mac)) {
+        erroresValidacion.value[`mac_${i}`] = 'MAC inválida.'
+        valido = false
+      }
+    })
   }
 
   return valido
@@ -129,19 +202,30 @@ function validar() {
 async function onGuardar() {
   if (!validar()) return
 
-  // Creamos una copia de los datos
   const datosAGuardar = { ...form.value }
 
-  // Si el checkbox está marcado, forzamos los valores de institución
   if (esInstitucional.value) {    
     datosAGuardar.propietario = 'Perteneciente a la UPTMA Ext. Villa del Rosario'
     datosAGuardar.tipo_personal = 'institucional' 
   }
 
   guardando.value = true
-  const res = dispositivoEditando.value
-    ? await actualizar(dispositivoEditando.value.id, datosAGuardar)
-    : await crear(datosAGuardar)
+  let res
+
+  if (dispositivoEditando.value) {
+    res = await actualizar(dispositivoEditando.value.id, datosAGuardar)
+    
+    if (res.ok) {
+      const aGuardar = tieneMasDispositivos.value ? dispositivosAdicionales.value : []
+      await guardarDispositivosAdicionales(dispositivoEditando.value.id, aGuardar)
+    }
+  } else {
+    res = await crear(datosAGuardar)
+    
+    if (res.ok && tieneMasDispositivos.value) {
+      await guardarDispositivosAdicionales(res.data.id, dispositivosAdicionales.value)
+    }
+  }
   
   guardando.value = false
 
@@ -185,9 +269,9 @@ async function exportarCSV() {
     return
   }
 
-  const headers = ['Marca', 'Modelo', 'Dirección MAC', 'Propietario', 'Tipo de Personal']
+  const headers = ['Nombre', 'Marca', 'Modelo', 'Dirección MAC', 'Propietario', 'Tipo de Personal']
   const filas = res.data.map(d => [
-    d.marca, d.modelo, d.direccion_mac, d.propietario, d.tipo_personal
+    d.nombre || '', d.marca, d.modelo, d.direccion_mac, d.propietario, d.tipo_personal
   ])
 
   const csvContent = [
@@ -229,12 +313,12 @@ async function exportarPDF() {
   doc.text('Fecha de Emisión: ' + new Date().toLocaleDateString('es-ES'), anchoPagina - 15, 30, { align: 'right' })
 
   const filas = res.data.map(d => [
-    d.marca, d.modelo, d.direccion_mac, d.propietario, d.tipo_personal.toUpperCase()
+    d.nombre || '', d.marca, d.modelo, d.direccion_mac, d.propietario, d.tipo_personal.toUpperCase()
   ])
 
   autoTable(doc, {
     startY: 35,
-    head: [['Marca', 'Modelo', 'Dirección MAC', 'Propietario', 'Tipo de Personal']],
+    head: [['Nombre', 'Marca', 'Modelo', 'Dirección MAC', 'Propietario', 'Tipo']],
     body: filas,
     theme: 'grid',
     headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
@@ -256,40 +340,23 @@ async function exportarPDF() {
         <p class="text-sm text-slate-500 mt-1">Registro de dispositivos conectados a la red.</p>
       </div>
       <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-        <BaseButton variant="secondary" @click="exportarCSV" class="w-full sm:w-auto">
-          Exportar Excel
-        </BaseButton>
-        <BaseButton variant="secondary" @click="exportarPDF" class="w-full sm:w-auto">
-          Exportar PDF
-        </BaseButton>
-        <BaseButton v-if="auth.puedeEscribir" variant="primary" @click="abrirCrear" class="w-full sm:w-auto">
-          Registrar MAC
-        </BaseButton>
+        <BaseButton variant="secondary" @click="exportarCSV" class="w-full sm:w-auto">Exportar Excel</BaseButton>
+        <BaseButton variant="secondary" @click="exportarPDF" class="w-full sm:w-auto">Exportar PDF</BaseButton>
+        <BaseButton v-if="auth.puedeEscribir" variant="primary" @click="abrirCrear" class="w-full sm:w-auto">Registrar MAC</BaseButton>
       </div>
     </div>
 
     <!-- Filtros -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-      <input 
-        v-model="filtros.busqueda" 
-        placeholder="Buscar por MAC, propietario, marca..." 
-        class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition" 
-        @input="aplicarFiltros" 
-      />
-      <select 
-        v-model="filtros.tipo_personal" 
-        class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition" 
-        @change="aplicarFiltros"
-      >
+      <input v-model="filtros.busqueda" placeholder="Buscar..." class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" @input="aplicarFiltros" />
+      <select v-model="filtros.tipo_personal" class="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" @change="aplicarFiltros">
         <option value="">Todos los tipos</option>
         <option value="docente">Docente</option>
         <option value="administrativo">Administrativo</option>
         <option value="obrero">Obrero</option>
         <option value="institucional">Institución</option>
       </select>
-      <BaseButton variant="cancel" @click="filtros = { busqueda: '', tipo_personal: '' }; aplicarFiltros()" class="w-full">
-        Limpiar filtros
-      </BaseButton>
+      <BaseButton variant="cancel" @click="filtros = { busqueda: '', tipo_personal: '' }; aplicarFiltros()" class="w-full">Limpiar filtros</BaseButton>
     </div>
 
     <!-- Tabla -->
@@ -300,7 +367,7 @@ async function exportarPDF() {
         <table class="w-full text-sm min-w-[700px]">
           <thead class="bg-slate-50 text-slate-500 text-left text-xs uppercase font-bold">
             <tr>
-              <th class="px-4 py-4">Marca / Modelo</th>
+              <th class="px-4 py-4">Equipo</th> 
               <th class="px-4 py-4">Dirección MAC</th>
               <th class="px-4 py-4">Propietario</th>
               <th class="px-4 py-4">Tipo</th>
@@ -310,8 +377,8 @@ async function exportarPDF() {
           <tbody class="divide-y divide-slate-100">
             <tr v-for="d in dispositivos" :key="d.id" class="hover:bg-blue-50/30 transition-colors">
               <td class="px-4 py-3">
-                <p class="font-bold text-slate-800">{{ d.marca }}</p>
-                <p class="text-xs text-slate-500">{{ d.modelo }}</p>
+                <p class="font-bold text-slate-800">{{ d.nombre || '—' }}</p>
+                <p class="text-xs text-slate-500">{{ d.marca }} {{ d.modelo }}</p>
               </td>
               <td class="px-4 py-3 font-mono text-xs font-semibold text-slate-600">{{ d.direccion_mac }}</td>
               <td class="px-4 py-3 text-slate-700 font-medium">{{ d.propietario }}</td>
@@ -322,12 +389,8 @@ async function exportarPDF() {
               </td>
               <td class="px-4 py-3 text-right">
                 <div class="inline-flex gap-2">
-                  <BaseButton v-if="auth.puedeEscribir" size="sm" variant="secondary" @click="abrirEditar(d)">
-                    Editar
-                  </BaseButton>
-                  <BaseButton v-if="auth.isSuperUsuario" size="sm" variant="danger" @click="pedirConfirmacionEliminar(d)">
-                    Eliminar
-                  </BaseButton>
+                  <BaseButton v-if="auth.puedeEscribir" size="sm" variant="secondary" @click="abrirEditar(d)">Editar</BaseButton>
+                  <BaseButton v-if="auth.isSuperUsuario" size="sm" variant="danger" @click="pedirConfirmacionEliminar(d)">Eliminar</BaseButton>
                 </div>
               </td>
             </tr>
@@ -341,30 +404,13 @@ async function exportarPDF() {
       <div v-if="totalPaginas > 1" class="px-6 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50/50">
         <p class="text-xs font-medium text-slate-500">
           Mostrando <span class="font-bold text-slate-700">{{ (paginaActual - 1) * registrosPorPagina + 1 }}</span> 
-          a 
-          <span class="font-bold text-slate-700">{{ Math.min(paginaActual * registrosPorPagina, totalRegistros) }}</span> 
+          a <span class="font-bold text-slate-700">{{ Math.min(paginaActual * registrosPorPagina, totalRegistros) }}</span> 
           de <span class="font-bold text-slate-700">{{ totalRegistros }}</span> dispositivos
         </p>
         <div class="flex items-center gap-2">
-          <button
-            :disabled="paginaActual === 1"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border"
-            :class="paginaActual === 1 ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
-            @click="cambiarPagina(paginaActual - 1)"
-          >
-            Anterior
-          </button>
-          <span class="text-xs font-bold text-slate-700 px-2">
-            Página {{ paginaActual }} de {{ totalPaginas }}
-          </span>
-          <button
-            :disabled="paginaActual === totalPaginas"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border"
-            :class="paginaActual === totalPaginas ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'"
-            @click="cambiarPagina(paginaActual + 1)"
-          >
-            Siguiente
-          </button>
+          <button :disabled="paginaActual === 1" class="px-3 py-1.5 rounded-lg text-xs font-bold border" :class="paginaActual === 1 ? 'bg-slate-100 text-slate-400' : 'bg-white text-slate-700 hover:bg-slate-50'" @click="cambiarPagina(paginaActual - 1)">Anterior</button>
+          <span class="text-xs font-bold text-slate-700 px-2">Página {{ paginaActual }} de {{ totalPaginas }}</span>
+          <button :disabled="paginaActual === totalPaginas" class="px-3 py-1.5 rounded-lg text-xs font-bold border" :class="paginaActual === totalPaginas ? 'bg-slate-100 text-slate-400' : 'bg-white text-slate-700 hover:bg-slate-50'" @click="cambiarPagina(paginaActual + 1)">Siguiente</button>
         </div>
       </div>
     </div>
@@ -372,55 +418,53 @@ async function exportarPDF() {
     <!-- Modal Formulario -->
     <BaseModal :open="modalAbierto" :title="dispositivoEditando ? 'Editar Dispositivo' : 'Nuevo Dispositivo'" size="md" @close="modalAbierto = false">
       <form class="space-y-4" @submit.prevent="onGuardar">
+        
+        <!--  Nombre del Equipo -->
+        <div>
+          <label class="block text-sm font-bold text-slate-700 mb-1">Nombre del Equipo *</label>
+          <input v-model="form.nombre" required placeholder="Ej: Laptop de Docente" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" :class="{ 'border-rose-400': erroresValidacion.nombre }" />
+          <p v-if="erroresValidacion.nombre" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.nombre }}</p>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1">Marca *</label>
-            <input v-model="form.marca" required placeholder="Ej: Samsung" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" :class="{ 'border-rose-400': erroresValidacion.marca }" />
+            <input v-model="form.marca" required class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" :class="{ 'border-rose-400': erroresValidacion.marca }" />
             <p v-if="erroresValidacion.marca" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.marca }}</p>
           </div>
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1">Modelo *</label>
-            <input v-model="form.modelo" required placeholder="Ej: Galaxy A54" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" :class="{ 'border-rose-400': erroresValidacion.modelo }" />
+            <input v-model="form.modelo" required class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" :class="{ 'border-rose-400': erroresValidacion.modelo }" />
             <p v-if="erroresValidacion.modelo" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.modelo }}</p>
           </div>
         </div>
 
         <div>
           <label class="block text-sm font-bold text-slate-700 mb-1">Dirección MAC *</label>
-          <input 
-            :value="form.direccion_mac"
-            @input="formatearMAC"
-            required 
-            placeholder="AA-BB-CC-DD-EE-FF" 
-            maxlength="17"
-            class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono uppercase focus:outline-none focus:ring-2 focus:ring-blue-500/20" 
-            :class="{ 'border-rose-400': erroresValidacion.direccion_mac }" 
-          />
-          <p class="text-xs text-slate-500 mt-1">Ingresa los 12 caracteres hexadecimales.</p>
+          <input :value="form.direccion_mac" @input="formatearMAC" required placeholder="AA-BB-CC-DD-EE-FF" maxlength="17" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono uppercase" :class="{ 'border-rose-400': erroresValidacion.direccion_mac }" />
           <p v-if="erroresValidacion.direccion_mac" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.direccion_mac }}</p>
         </div>
 
         <!-- Checkbox Institucional -->
         <div class="bg-violet-50 border border-violet-100 rounded-xl p-4">
           <label class="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" v-model="esInstitucional" class="w-5 h-5 text-violet-600 rounded focus:ring-violet-500" />
+            <input type="checkbox" v-model="esInstitucional" class="w-5 h-5 text-violet-600 rounded" />
             <div>
               <span class="text-sm font-bold text-violet-800">¿Dispositivo perteneciente a la Institución?</span>
-              <p class="text-xs text-violet-600 mt-0.5">Marca esta casilla si el equipo es un activo de la universidad.</p>
+              <p class="text-xs text-violet-600 mt-0.5">Marca si el equipo es un activo de la universidad.</p>
             </div>
           </label>
         </div>
 
-        <!-- Campos si NO es institucional -->
         <div v-if="!esInstitucional" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1">Propietario *</label>
-            <input v-model="form.propietario" required placeholder="Nombre y apellido" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" :class="{ 'border-rose-400': erroresValidacion.propietario }" />
+            <input v-model="form.propietario" required class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm" :class="{ 'border-rose-400': erroresValidacion.propietario }" />
             <p v-if="erroresValidacion.propietario" class="text-xs text-rose-500 mt-1">{{ erroresValidacion.propietario }}</p>
           </div>
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1">Tipo de Personal *</label>
-            <select v-model="form.tipo_personal" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+            <select v-model="form.tipo_personal" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm">
               <option value="docente">Docente</option>
               <option value="administrativo">Administrativo</option>
               <option value="obrero">Obrero</option>
@@ -428,10 +472,68 @@ async function exportarPDF() {
           </div>
         </div>
 
-        <!-- Mensaje si SÍ es institucional -->
         <div v-else class="bg-slate-50 border border-slate-200 rounded-xl p-4">
           <p class="text-sm font-bold text-slate-700">Propietario: <span class="text-blue-600">Perteneciente a la UPTMA Ext. Villa del Rosario</span></p>
-          <p class="text-xs text-slate-500 mt-1">Este dispositivo se registrará como un activo de la institución.</p>
+        </div>
+
+        <!-- Checkbox para más dispositivos -->
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-4">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" v-model="tieneMasDispositivos" class="w-5 h-5 text-blue-600 rounded" />
+            <div>
+              <span class="text-sm font-bold text-blue-800">Registrar MAC de otro dispositivo</span>
+              <p class="text-xs text-blue-600 mt-0.5">Marca si este usuario tiene múltiples dispositivos.</p>
+            </div>
+          </label>
+        </div>
+
+        <!--  Sección de dispositivos adicionales -->
+        <div v-if="tieneMasDispositivos" class="space-y-3">
+          <div class="flex justify-between items-center">
+            <h4 class="text-sm font-bold text-slate-700">Dispositivos Adicionales</h4>
+            <BaseButton type="button" size="sm" variant="secondary" @click="agregarDispositivoAdicional">+ Agregar</BaseButton>
+          </div>
+
+          <div v-if="dispositivosAdicionales.length === 0" class="text-sm text-slate-500 text-center py-4 border border-dashed border-slate-200 rounded-lg">
+            Haz clic en "+ Agregar".
+          </div>
+
+          <div v-for="(d, i) in dispositivosAdicionales" :key="i" class="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-slate-600 uppercase">Dispositivo {{ i + 1 }}</span>
+              <button type="button" class="text-xs text-rose-500 hover:text-rose-700 font-bold" @click="eliminarDispositivoAdicional(i)">Eliminar</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Nombre *</label>
+                <input v-model="d.nombre_dispositivo" placeholder="Ej: Laptop personal" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+                <p v-if="erroresValidacion[`dispositivo_${i}`]" class="text-xs text-rose-500 mt-1">{{ erroresValidacion[`dispositivo_${i}`] }}</p>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Tipo</label>
+                <select v-model="d.tipo_dispositivo" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                  <option value="laptop">Laptop</option>
+                  <option value="tablet">Tablet</option>
+                  <option value="celular">Celular</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Marca</label>
+                <input v-model="d.marca" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Modelo</label>
+                <input v-model="d.modelo" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-xs font-bold text-slate-600 mb-1">Dirección MAC *</label>
+                <input :value="d.direccion_mac" @input="(e) => formatearMACAdicional(e, i)" placeholder="AA-BB-CC-DD-EE-FF" maxlength="17" class="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono uppercase" />
+                <p v-if="erroresValidacion[`mac_${i}`]" class="text-xs text-rose-500 mt-1">{{ erroresValidacion[`mac_${i}`] }}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100">

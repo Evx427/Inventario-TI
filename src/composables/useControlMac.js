@@ -133,5 +133,64 @@ export function useControlMac() {
     }
   }
 
-  return { dispositivos, totalRegistros, cargando, error, listar, crear, actualizar, eliminar }
+
+  // --- Funciones para dispositivos adicionales ---
+  async function guardarDispositivosAdicionales(propietarioId, dispositivos) {
+    try {
+      // 1. Borrar los dispositivos anteriores
+      await supabase
+        .from('control_mac_dispositivos')
+        .delete()
+        .eq('propietario_id', propietarioId)
+
+      // 2. Insertar los nuevos
+      if (dispositivos.length > 0) {
+        const limpios = dispositivos.map(d => ({
+          propietario_id: propietarioId,
+          nombre_dispositivo: d.nombre_dispositivo,
+          marca: d.marca || null,
+          modelo: d.modelo || null,
+          direccion_mac: d.direccion_mac.toUpperCase(),
+          tipo_dispositivo: d.tipo_dispositivo || null
+        }))
+
+        const { error } = await supabase
+          .from('control_mac_dispositivos')
+          .insert(limpios)
+
+        if (error) throw error
+      }
+
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: err.message }
+    }
+  }
+
+  async function obtenerDispositivosAdicionales(propietarioId) {
+    try {
+      const { data, error } = await supabase
+        .from('control_mac_dispositivos')
+        .select('*')
+        .eq('propietario_id', propietarioId)
+
+      if (error) throw error
+      return { ok: true, data: data || [] }
+    } catch (err) {
+      return { ok: false, error: err.message }
+    }
+  }
+
+  return {
+    dispositivos,
+    totalRegistros,
+    cargando,
+    error,
+    listar,
+    crear,
+    actualizar,
+    eliminar,
+    guardarDispositivosAdicionales,   
+    obtenerDispositivosAdicionales    
+  }
 }
