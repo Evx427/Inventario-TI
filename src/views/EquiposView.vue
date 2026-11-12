@@ -9,11 +9,13 @@ import BaseButton from '../components/ui/BaseButton.vue'
 import ConfirmModal from '../components/ui/ConfirmModal.vue'
 import EquipoDetalleModal from '../components/ui/EquipoDetalleModal.vue'
 import EquipoForm from '../components/forms/EquipoForm.vue'
+import { usePerifericos } from '../composables/usePerifericos'
 
 const auth = useAuth()
 const toast = useNotificacionesStore()
 
 const { equipos, totalEquipos, cargando, listar, crear, actualizar, obtener, eliminar } = useEquipos()
+const { guardarPerifericos } = usePerifericos()
 
 const categorias = ref([])
 const filtros = ref({ busqueda: '', categoria_id: '', estado: '' })
@@ -100,11 +102,30 @@ async function ejecutarEliminar() {
   equipoAEliminar.value = null
 }
 
-async function onGuardar({ equipo, hardware }) {
-  const res = equipoEditando.value
-    ? await actualizar(equipoEditando.value.codigo_bien_publico, equipo, hardware)
-    : await crear(equipo, hardware)
+async function onGuardar({ equipo, hardware, perifericos }) {
+  let res
 
+  // 1. Guardar (o actualizar) el equipo y su hardware
+  if (equipoEditando.value) {
+    res = await actualizar(equipoEditando.value.codigo_bien_publico, equipo, hardware)
+  } else {
+    res = await crear(equipo, hardware)
+  }
+
+  // 2. Si el equipo se guardó con éxito, guardar los periféricos (solo si vienen)
+  if (res.ok && perifericos && perifericos.length > 0) {
+    const codigoEquipo = equipoEditando.value
+      ? equipoEditando.value.codigo_bien_publico
+      : equipo.codigo_bien_publico
+
+    const resPeri = await guardarPerifericos(codigoEquipo, perifericos)
+    if (!resPeri.ok) {
+      toast.error('Equipo guardado, pero periféricos fallaron: ' + resPeri.error)
+      return
+    }
+  }
+
+  // 3. Mostrar resultado final
   if (res.ok) {
     modalFormAbierto.value = false
     toast.exito(equipoEditando.value ? 'Equipo actualizado correctamente' : 'Equipo registrado con éxito')
