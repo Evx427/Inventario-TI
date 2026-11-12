@@ -1,34 +1,34 @@
 @import "tailwindcss";
 
-
 :root {
-  /* Paleta Oregon Trail */
-  --trail-brown: #8B4513;
-  --prairie-green: #556B2F;
-  --sky-blue: #87CEEB;
-  --wagon-tan: #D2B48C;
-  --campfire-orange: #FF8C00;
-  --river-blue: #4682B4;
-  --dust-yellow: #DAA520;
-  --night-black: #1A1A1A;
-  --bg-paper: #F4F1EA; /* Fondo tipo papel/mapa */
+  /* Paleta MongoDB Forest Neon */
+  --forest-black: #001e2b;
+  --neon-green: #00ed64;
+  --dark-green: #00684a;
+  --white: #ffffff;
+  --action-blue: #006cfa;
+  --hover-blue: #3860be;
+  --teal-gray: #b8c4c2;
+  --cool-gray: #5c6c75;
   
   /* Fuentes */
-  --font-pixel: 'Press Start 2P', cursive;
-  --font-retro: 'VT323', monospace;
+  --font-serif: 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 body {
-  font-family: var(--font-retro);
-  background-color: var(--bg-paper);
-  color: var(--night-black);
-  font-size: 1.25rem; /* VT323 es pequeña, necesita tamaño mayor */
+  font-family: var(--font-serif);
+  background-color: var(--forest-black);
+  color: var(--white);
 }
 
-h1, h2, h3, .font-pixel {
-  font-family: var(--font-pixel);
+h1, h2, h3 {
+  font-family: var(--font-serif);
 }
 
+.font-mono {
+  font-family: var(--font-mono);
+}
 
 
 /* Estilos globales para hacer las tablas responsivas en móviles */

@@ -58,39 +58,39 @@ const esRutaAuth = computed(() =>
 
   <RouterView v-if="esRutaAuth" />
 
-  <!-- Fondo general tipo papel -->
-  <div v-else class="min-h-screen bg-[#F4F1EA] flex text-slate-800 font-sans overflow-x-hidden">
+  <!-- Fondo general Teal-Black -->
+  <div v-else class="min-h-screen bg-[#001e2b] flex text-white font-sans overflow-x-hidden">
     
     <!-- Fondo oscuro para móviles -->
     <div 
       v-if="menuAbierto" 
-      class="fixed inset-0 bg-black/60 z-40 lg:hidden transition-opacity"
+      class="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
       @click="menuAbierto = false"
     ></div>
 
-    <!-- SIDEBAR: Estilo Madera/Marrón -->
+    <!-- SIDEBAR: Estilo MongoDB -->
     <aside 
-      class="w-64 bg-[#8B4513] border-r-4 border-black flex flex-col fixed h-full z-50 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-[4px_0px_0px_0px_rgba(0,0,0,1)]"
+      class="w-64 bg-[#001e2b] border-r border-[#00684a]/30 flex flex-col fixed h-full z-50 transition-transform duration-300 ease-in-out lg:translate-x-0"
       :class="menuAbierto ? 'translate-x-0' : '-translate-x-full'"
     >
       
       <!-- Cabecera del Sidebar -->
-      <div class="h-20 flex items-center gap-3 px-6 border-b-4 border-black bg-[#6b3410]">
-        <img src="/logito.png" alt="Logo" class="w-10 h-10 rounded-full object-cover border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] shrink-0" />
-        <h1 class="text-xs font-bold text-[#F4F1EA] font-pixel tracking-tight leading-tight">Inventario TI</h1>
+      <div class="h-20 flex items-center gap-3 px-6 border-b border-[#00684a]/30">
+        <img src="/logito.png" alt="Logo" class="w-10 h-10 rounded-full border-2 border-[#00ed64] object-cover shrink-0" />
+        <h1 class="text-lg font-bold text-white tracking-tight">Inventario TI</h1>
       </div>
 
       <!-- Navegación -->
-      <nav class="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
+      <nav class="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
         <RouterLink
           v-for="item in menu"
           :key="item.to"
           :to="item.to"
           @click="cerrarMenu"
-          class="flex items-center gap-3 px-4 py-3 rounded-md text-sm font-bold border-2 transition-all duration-200"
+          class="flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium transition-all duration-200"
           :class="isActive(item.to)
-            ? 'bg-[#FF8C00] border-black text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] translate-y-[-2px]' 
-            : 'border-transparent text-[#F4F1EA] hover:bg-[#6b3410] hover:border-black'"
+            ? 'bg-[#00ed64]/10 text-[#00ed64] border border-[#00ed64]/30' 
+            : 'text-[#b8c4c2] hover:bg-[#00684a]/20 hover:text-white border border-transparent'"
         >
           <span class="text-lg">{{ item.icon }}</span>
           {{ item.label }}
@@ -98,22 +98,22 @@ const esRutaAuth = computed(() =>
       </nav>
 
       <!-- Perfil de Usuario -->
-      <div class="p-4 border-t-4 border-black bg-[#6b3410]">
+      <div class="p-4 border-t border-[#00684a]/30">
         <div class="flex items-center gap-3 mb-4">
-          <div class="w-10 h-10 rounded-full bg-[#D2B48C] border-2 border-black text-black flex items-center justify-center font-bold text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+          <div class="w-10 h-10 rounded-full bg-[#00684a] border border-[#00ed64]/50 text-white flex items-center justify-center font-bold text-sm">
            {{ auth.perfil?.nombre_completo?.charAt(0) || auth.user?.email?.charAt(0) || 'U' }}
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-bold text-[#F4F1EA] truncate">
+            <p class="text-sm font-bold text-white truncate">
               {{ auth.perfil?.nombre_completo || auth.user?.email || 'Usuario' }}
             </p>
-            <p class="text-xs text-[#DAA520] font-bold truncate uppercase tracking-wider">
+            <p class="text-xs text-[#00ed64] font-mono uppercase tracking-wider truncate">
               {{ auth.rol || 'Cargando...' }}
             </p>
           </div>
         </div>
         <button
-          class="w-full text-xs bg-[#F4F1EA] border-2 border-black hover:bg-[#D2B48C] text-black py-2.5 rounded-md transition-all font-bold flex justify-center items-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-none"
+          class="w-full text-xs bg-transparent border border-[#5c6c75] hover:border-[#00ed64] hover:text-[#00ed64] text-[#b8c4c2] py-2.5 rounded-full transition-all font-bold flex justify-center items-center gap-2"
           @click="mostrarConfirmacionSalir = true"
         >
           Cerrar Sesión
@@ -125,21 +125,21 @@ const esRutaAuth = computed(() =>
     <main class="flex-1 lg:ml-64 flex flex-col min-h-screen w-full">
       
       <!-- Header superior -->
-      <header class="h-16 bg-[#D2B48C] border-b-4 border-black flex items-center justify-between px-4 lg:px-8">
+      <header class="h-16 bg-[#001e2b]/80 backdrop-blur-md border-b border-[#00684a]/30 flex items-center justify-between px-4 lg:px-8">
         <div class="flex items-center gap-3">
           <button 
             @click="menuAbierto = true"
-            class="lg:hidden p-2 text-black border-2 border-transparent hover:border-black rounded-md transition-colors"
+            class="lg:hidden p-2 text-[#b8c4c2] hover:text-white transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-6 h-6">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
             </svg>
           </button>
-          <h2 class="text-sm font-bold text-black font-pixel uppercase tracking-widest hidden sm:block">
+          <h2 class="text-sm font-bold text-[#b8c4c2] font-mono uppercase tracking-widest hidden sm:block">
             {{ menu.find(m => m.to === route.path)?.label || 'Sistema' }}
           </h2>
         </div>
-        <div class="lg:hidden text-sm font-bold text-black">
+        <div class="lg:hidden text-sm font-bold text-white">
           {{ auth.perfil?.nombre_completo?.split(' ')[0] || 'Usuario' }}
         </div>
       </header>
@@ -150,32 +150,32 @@ const esRutaAuth = computed(() =>
       </div>
 
       <!-- Footer -->
-      <footer class="py-4 text-center text-xs font-bold text-black border-t-4 border-black bg-[#D2B48C]">
-        -Inventario TI- © 2026 · By Ever Garcia 
+      <footer class="py-4 text-center text-xs font-mono text-[#5c6c75] border-t border-[#00684a]/30">
+        Inventario TI · MongoDB Forest Neon Style © 2026
       </footer>
     </main>
 
-    <!-- Modal de Confirmación de Salida (Estilo Retro) -->
+    <!-- Modal de Confirmación de Salida -->
     <Teleport to="body">
       <div
         v-if="mostrarConfirmacionSalir"
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
         @click.self="mostrarConfirmacionSalir = false"
       >
-        <div class="bg-[#F4F1EA] border-4 border-black rounded-lg max-w-md w-full p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] text-center">
-          <h3 class="text-xl font-bold text-black mb-2 font-pixel">¿Cerrar sesión?</h3>
-          <p class="text-sm font-medium text-slate-700 mb-6">
+        <div class="bg-[#001e2b] border border-[#00684a]/50 rounded-2xl max-w-md w-full p-6 shadow-2xl text-center">
+          <h3 class="text-xl font-bold text-white mb-2">¿Cerrar sesión?</h3>
+          <p class="text-sm text-[#b8c4c2] mb-6">
             Tendrás que introducir los datos si quieres acceder de nuevo al sistema.
           </p>
-          <div class="flex gap-4 justify-center">
+          <div class="flex gap-3 justify-center">
             <button
-              class="px-5 py-2.5 rounded-md bg-[#D2B48C] border-2 border-black text-black font-bold transition-all text-sm w-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-none"
+              class="px-5 py-2.5 rounded-full bg-transparent border border-[#5c6c75] text-[#b8c4c2] hover:text-white font-bold transition-all text-sm w-full"
               @click="mostrarConfirmacionSalir = false"
             >
               Cancelar
             </button>
             <button
-              class="px-5 py-2.5 rounded-md bg-[#FF8C00] border-2 border-black text-black font-bold transition-all text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-none"
+              class="px-5 py-2.5 rounded-full bg-[#00ed64] text-[#001e2b] font-bold transition-all text-sm w-full hover:bg-[#00ed64]/90"
               @click="confirmarCerrarSesion"
             >
               Sí, salir
