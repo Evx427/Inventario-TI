@@ -162,9 +162,9 @@ async function onSubmit() {
           </BaseButton>
 
           <p class="text-center text-sm text-[#b8c4c2] pt-2">
-            ¿No tienes cuenta?
+            
             <RouterLink to="/register" class="text-[#00ed64] hover:text-[#00ed64]/80 font-bold">
-              Regístrate aquí
+          
             </RouterLink>
           </p>
         </form>
