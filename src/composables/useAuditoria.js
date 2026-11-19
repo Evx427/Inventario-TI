@@ -98,23 +98,44 @@ export function useAuditoria() {
     if (!err) usuarios.value = data || []
   }
 
-  function traducirAccion(accion) {
+    function traducirAccion(accion) {
     const mapa = {
+      // Autenticación
       'LOGIN': 'Inicio de sesión',
       'LOGOUT': 'Cierre de sesión',
       'LOGIN_FALLIDO': 'Login fallido',
-      'REGISTRO': 'Registro',
-      'INSERT': 'Creación',
-      'UPDATE': 'Actualización',
-      'DELETE': 'Eliminación',
-      'DELETE_EQUIPO_DENEGADO': 'Eliminación denegada',
-      'DELETE_CATEGORIA_DENEGADO': 'Eliminación categoría denegada',
+      'REGISTRO': 'Registro de usuario',
+      'RECUPERAR_PASSWORD': 'Recuperación de contraseña',
+      'PASSWORD_ACTUALIZADA': 'Cambio de contraseña',
+
+      // Equipos y hardware
+      'INSERT': 'Creación de equipo',
+      'UPDATE': 'Actualización de equipo',
+      'DELETE': 'Eliminación de equipo',
+      'DELETE_EQUIPO_DENEGADO': 'Intento de eliminación denegado',
+
+      // Solicitudes
+      'INSERT_SOLICITUD': 'Nueva solicitud registrada',
+      'UPDATE_SOLICITUD': 'Edición de datos del solicitante',
+      'DEVOLUCION_EQUIPO': 'Devolución de equipo',
+      'DEVOLUCION_CON_NOVEDAD': 'Devolución con novedad',
+
+      // Control MAC
+      'INSERT_CONTROL_MAC': 'Registro de dispositivo MAC',
+      'UPDATE_CONTROL_MAC': 'Edición de dispositivo MAC',
+      'DELETE_CONTROL_MAC': 'Eliminación de dispositivo MAC',
+
+      // Categorías
+      'DELETE_CATEGORIA_DENEGADO': 'Intento de eliminación de categoría denegado',
+
+      // Usuarios
       'INVITACION_USUARIO': 'Invitación de usuario',
       'CAMBIO_ROL': 'Cambio de rol',
       'USUARIO_ACTIVADO': 'Activación de usuario',
       'USUARIO_DESACTIVADO': 'Desactivación de usuario',
-      'PASSWORD_ACTUALIZADA': 'Cambio de contraseña',
-      'RECUPERAR_PASSWORD': 'Recuperación de contraseña',
+      'ELIMINAR_USUARIO': 'Eliminación de usuario',
+
+      // Genérico
       'ACCION_DENEGADA': 'Acción denegada',
     }
     return mapa[accion] || accion

@@ -1,63 +1,77 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
-// Controla si el preloader se muestra
 const visible = ref(false)
-
-// Progreso de la barra
 const progreso = ref(0)
+const lineasTerminal = ref([])
+const lineaActual = ref(0)
 
-// Índice del nombre activo
-const nombreActual = ref(0)
-
-// Nombres a mostrar
-const nombres = [
-  'TSU. Ever Garcia',
-  'TSU. Andres Martinez',
-  'Licdo. Jorge Fernandez'
+// Textos que aparecerán letra por letra, estilo "boot sequence"
+const textosBoot = [
+  '> INICIANDO SISTEMA DE INVENTARIO...',
+  '> CARGANDO MÓDULOS DE SEGURIDAD...',
+  '> VERIFICANDO CONEXIÓN CON SUPABASE...',
+  '> AUTENTICANDO CREDENCIALES...',
+  '> ESTABLECIENDO ENLACE ENCRIPTADO...',
+  '> SISTEMA LISTO. BIENVENIDO, OPERADOR.',
 ]
 
 let intervaloCarga = null
-let intervaloNombres = null
+let intervaloTexto = null
 
 onMounted(() => {
-  // 1. Verificar si ya se mostró el preloader en esta sesión
+  // Verificar si ya se mostró en esta sesión
   const yaMostrado = sessionStorage.getItem('preloader_mostrado')
 
   if (!yaMostrado) {
-    // Si no se ha mostrado, lo activamos
     visible.value = true
-    
-    // 2. Simular progreso de carga
+
+    // Animación de progreso (0 a 100 en ~3.5 segundos)
     intervaloCarga = setInterval(() => {
       if (progreso.value < 100) {
-        progreso.value += Math.floor(Math.random() * 6) + 4
+        progreso.value += Math.floor(Math.random() * 5) + 2
         if (progreso.value > 100) progreso.value = 100
       } else {
         clearInterval(intervaloCarga)
-        // Esperar un poco y ocultar
         setTimeout(() => {
           visible.value = false
-          // Marcar como mostrado en esta sesión
           sessionStorage.setItem('preloader_mostrado', 'true')
-        }, 600)
+        }, 800)
       }
-    }, 190)
+    }, 100)
 
-    // 3. Rotar nombres cada 900ms
-    intervaloNombres = setInterval(() => {
-      nombreActual.value = (nombreActual.value + 1) % nombres.length
-    }, 900)
+    // Animación de textos tipo terminal
+    let indiceLetra = 0
+    let indiceLinea = 0
+
+    intervaloTexto = setInterval(() => {
+      const lineaCompleta = textosBoot[indiceLinea]
+      if (!lineaCompleta) {
+        clearInterval(intervaloTexto)
+        return
+      }
+
+      if (indiceLetra < lineaCompleta.length) {
+        // Agregar letra a la línea actual
+        if (!lineasTerminal.value[indiceLinea]) {
+          lineasTerminal.value[indiceLinea] = ''
+        }
+        lineasTerminal.value[indiceLinea] += lineaCompleta[indiceLetra]
+        indiceLetra++
+      } else {
+        // Pasar a la siguiente línea
+        indiceLinea++
+        indiceLetra = 0
+        lineaActual.value = indiceLinea
+      }
+    }, 40) // Velocidad de escritura
   }
 })
 
 onUnmounted(() => {
   if (intervaloCarga) clearInterval(intervaloCarga)
-  if (intervaloNombres) clearInterval(intervaloNombres)
+  if (intervaloTexto) clearInterval(intervaloTexto)
 })
-
-// Clase de posición para el carrusel
-const nombreActivo = computed(() => nombres[nombreActual.value])
 </script>
 
 <template>
@@ -65,93 +79,111 @@ const nombreActivo = computed(() => nombres[nombreActual.value])
     <Transition name="fade">
       <div
         v-if="visible"
-        class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-blue-900 overflow-hidden"
+        class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#001e2b] overflow-hidden font-mono"
       >
-        <!-- Decoración de fondo -->
-        <div class="absolute inset-0 opacity-15 pointer-events-none">
-          <div class="absolute top-0 left-0 w-[500px] h-[500px] bg-blue-500 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-          <div class="absolute bottom-0 right-0 w-[500px] h-[500px] bg-blue-700 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
+        <!-- Rejilla de fondo sutil -->
+        <div class="absolute inset-0 opacity-[0.05] pointer-events-none">
+          <div class="absolute inset-0" style="background-image: linear-gradient(#00ed64 1px, transparent 1px), linear-gradient(90deg, #00ed64 1px, transparent 1px); background-size: 40px 40px;"></div>
         </div>
 
-        <!-- Logo circular animado -->
-        <div class="relative z-10 wave-animation mb-10">
-          <div class="w-44 h-44 rounded-full border-4 border-blue-400 shadow-[0_0_40px_rgba(59,130,246,0.6)] overflow-hidden bg-white flex items-center justify-center">
-            <img
-              src="/logito.png"
-              alt="Inventario TI"
-              class="w-full h-full object-cover rounded-full"
-            />
+        <!-- Logo con efecto de pulso -->
+        <div class="relative z-10 mb-12">
+          <div class="w-24 h-24 rounded-full border-2 border-[#00ed64] flex items-center justify-center relative animate-pulse-slow">
+            <div class="absolute inset-0 rounded-full border-2 border-[#00ed64] animate-ping-slow opacity-30"></div>
+            <span class="text-[#00ed64] text-4xl font-bold">I</span>
           </div>
         </div>
 
-        <!-- Barra de carga -->
-        <div class="relative z-10 w-72 h-2.5 bg-blue-950 rounded-full overflow-hidden mb-12 shadow-inner">
-          <div
-            class="h-full bg-blue-400 transition-all duration-200 ease-out rounded-full shadow-[0_0_10px_rgba(96,165,250,0.8)]"
-            :style="{ width: `${progreso}%` }"
-          ></div>
-        </div>
-
-        <!-- Carrusel de nombres (solo uno visible a la vez) -->
-        <div class="relative z-10 h-16 w-full max-w-md flex items-center justify-center overflow-hidden">
-          <Transition name="slide" mode="out-in">
+        <!-- Textos de terminal -->
+        <div class="relative z-10 w-full max-w-lg mb-8">
+          <div class="space-y-2">
             <p
-              :key="nombreActual"
-              class="text-2xl font-bold text-white tracking-widest drop-shadow-lg"
+              v-for="(linea, i) in lineasTerminal"
+              :key="i"
+              class="text-sm text-[#00ed64] tracking-wider"
+              :class="{ 'opacity-50': i < lineaActual }"
             >
-              {{ nombreActivo }}
+              {{ linea }}<span v-if="i === lineaActual" class="inline-block w-2 h-4 bg-[#00ed64] ml-1 animate-blink align-middle"></span>
             </p>
-          </Transition>
+          </div>
         </div>
 
-        <!-- Texto inferior -->
-        <p class="absolute bottom-10 text-blue-300 text-xs font-semibold tracking-[0.3em] uppercase">
-          Gestión de Equipos TI
-        </p>
+        <!-- Barra de progreso con líneas de escaneo -->
+        <div class="relative z-10 w-full max-w-lg mb-6">
+          <div class="flex justify-between text-xs text-[#00ed64] mb-2 tracking-widest">
+            <span>CARGANDO...</span>
+            <span>{{ progreso }}%</span>
+          </div>
+          <div class="w-full h-1 bg-[#002b3b] rounded-full overflow-hidden relative">
+            <div
+              class="h-full bg-[#00ed64] transition-all duration-200 ease-out relative"
+              :style="{ width: `${progreso}%` }"
+            >
+              <!-- Efecto de escaneo -->
+              <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-scan"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Créditos -->
+        <div class="relative z-10 text-center space-y-1 text-[#5c6c75] text-xs tracking-widest">
+          <p>TSU. EVER GARCIA</p>
+          <p>TSU. ANDRES MARTINEZ</p>
+          <p>LICDO. JORGE FERNANDEZ</p>
+        </div>
+
+        <!-- Esquinas decorativas (estilo HUD) -->
+        <div class="absolute top-6 left-6 w-12 h-12 border-t-2 border-l-2 border-[#00ed64]/50"></div>
+        <div class="absolute top-6 right-6 w-12 h-12 border-t-2 border-r-2 border-[#00ed64]/50"></div>
+        <div class="absolute bottom-6 left-6 w-12 h-12 border-b-2 border-l-2 border-[#00ed64]/50"></div>
+        <div class="absolute bottom-6 right-6 w-12 h-12 border-b-2 border-r-2 border-[#00ed64]/50"></div>
       </div>
     </Transition>
   </Teleport>
 </template>
 
 <style scoped>
-/* Animación de flotación suave */
-.wave-animation {
-  animation: wave 2.5s ease-in-out infinite;
-}
-
-@keyframes wave {
-  0% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(-15px) scale(1.05);
-  }
-  100% {
-    transform: translateY(0px) scale(1);
-  }
-}
-
-/* Transición de entrada/salida del nombre (carrusel) */
-.slide-enter-active {
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.slide-leave-active {
-  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.slide-enter-from {
-  transform: translateX(40px);
-  opacity: 0;
-}
-.slide-leave-to {
-  transform: translateX(-40px);
-  opacity: 0;
-}
-
-/* Fade general para ocultar el preloader */
+/* Animación de fade general */
 .fade-leave-active {
   transition: opacity 0.8s ease;
 }
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Animación del cursor parpadeante */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Animación de la barra de escaneo */
+@keyframes scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.animate-scan {
+  animation: scan 2s linear infinite;
+}
+
+/* Animación de pulso lento para el logo */
+@keyframes pulseSlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 237, 100, 0.4); }
+  50% { box-shadow: 0 0 30px 10px rgba(0, 237, 100, 0.1); }
+}
+.animate-pulse-slow {
+  animation: pulseSlow 2s ease-in-out infinite;
+}
+
+/* Animación del anillo expansivo */
+@keyframes pingSlow {
+  0% { transform: scale(1); opacity: 0.5; }
+  80%, 100% { transform: scale(1.5); opacity: 0; }
+}
+.animate-ping-slow {
+  animation: pingSlow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 </style>
