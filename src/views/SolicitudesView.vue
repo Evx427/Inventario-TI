@@ -10,17 +10,43 @@ import { generarPlanillasPDF } from '../utils/generarPlanilla.js'
 
 const auth = useAuth()
 const toast = useNotificacionesStore()
-const { solicitudes, cargando, estadisticas, listar, crear, registrarDevolucion } = useSolicitudes()
+
+// Desestructuración de funciones y variables del composable
+const { 
+  solicitudes, 
+  totalSolicitudes, 
+  cargando, 
+  estadisticas, 
+  listar, 
+  crear, 
+  registrarDevolucion, 
+  editarSolicitud 
+} = useSolicitudes()
 
 const equiposDisponibles = ref([])
 const filtros = ref({ estado: '', tipo_solicitante: '' })
+const paginaActual = ref(1)
+const registrosPorPagina = 10
+
 const modalAbierto = ref(false)
 const modalDevolucionAbierto = ref(false)
+const modalEditarAbierto = ref(false)
+
 const solicitudSeleccionada = ref(null)
+const solicitudEditando = ref(null)
 const guardando = ref(false)
 
 const form = ref(getFormVacio())
+const formDevolucion = ref({ observaciones: '', conNovedad: false, fecha_devolucion: '' })
+const formEdicion = ref({ nombre_completo: '', cedula: '', telefono: '', pnf: '', tipo_solicitante: 'docente' })
 
+// Determina si el equipo seleccionado pertenece a la categoría "Cables" (ID 8)
+const esCableSeleccionado = computed(() => {
+  const equipo = equiposDisponibles.value.find(e => e.codigo_bien_publico === form.value.equipo_id)
+  return equipo?.categoria_id === 8
+})
+
+// Estructura de datos para el formulario de creación
 function getFormVacio() {
   return {
     equipo_id: '',
@@ -29,41 +55,58 @@ function getFormVacio() {
     cedula: '',
     telefono: '',
     pnf: '',
+    fecha_solicitud: '',
+    observaciones: '',
     con_extension: false,
     con_cable_hdmi: false,
     con_cable_vga: false,
     con_caja: true,
     con_alimentador: true,
-    fecha_solicitud: '',
-    observaciones: '',
   }
 }
-
-const formDevolucion = ref({ observaciones: '', conNovedad: false, fecha_devolucion: '' })
 
 onMounted(async () => {
   await Promise.all([cargarEquipos(), refrescar()])
 })
 
+// Carga los equipos disponibles de las categorías 6, 7 y 8
 async function cargarEquipos() {
   const { data } = await supabase
     .from('equipos')
     .select('codigo_bien_publico, marca, modelo, categoria_id, categorias(nombre)')
-    .in('categoria_id', [6, 7])
+    .in('categoria_id', [6, 7, 8]) // 6=Videobeam, 7=Proyector, 8=Cables
     .eq('estado', 'activo')
     .order('codigo_bien_publico')
   equiposDisponibles.value = data || []
 }
 
-async function refrescar() {
-  await listar(filtros.value)
+// Recarga la lista de solicitudes con paginación
+async function refrescar(pagina = 1) {
+  paginaActual.value = pagina
+  await listar(filtros.value, pagina)
 }
 
+// Aplica los filtros y reinicia la paginación
+function aplicarFiltros() {
+  refrescar(1)
+}
+
+// Cálculo del total de páginas
+const totalPaginas = computed(() => Math.ceil(totalSolicitudes.value / registrosPorPagina))
+
+// Cambia a la página indicada
+function cambiarPagina(nuevaPagina) {
+  if (nuevaPagina < 1 || nuevaPagina > totalPaginas.value) return
+  refrescar(nuevaPagina)
+}
+
+// Abre el modal para crear una nueva solicitud
 function abrirCrear() {
   form.value = getFormVacio()
   modalAbierto.value = true
 }
 
+// Guarda una nueva solicitud
 async function onGuardar() {
   if (!form.value.equipo_id || !form.value.nombre_completo) {
     toast.advertencia('Debes seleccionar un equipo y un nombre.')
@@ -75,27 +118,41 @@ async function onGuardar() {
   }
 
   guardando.value = true
-  const res = await crear({
+
+  // Si el equipo es un cable, se fuerzan los implementos a false
+  const datosAGuardar = {
     ...form.value,
-    fecha_solicitud: form.value.fecha_solicitud ? new Date(form.value.fecha_solicitud).toISOString() : null,
-  })
+    fecha_solicitud: new Date(form.value.fecha_solicitud).toISOString(),
+  }
+  
+  if (esCableSeleccionado.value) {
+    datosAGuardar.con_extension = false
+    datosAGuardar.con_cable_hdmi = false
+    datosAGuardar.con_cable_vga = false
+    datosAGuardar.con_caja = false
+    datosAGuardar.con_alimentador = false
+  }
+
+  const res = await crear(datosAGuardar)
   guardando.value = false
   
   if (res.ok) {
     modalAbierto.value = false
     toast.exito('Solicitud registrada correctamente')
-    await refrescar()
+    await refrescar(paginaActual.value)
   } else {
     toast.error(res.error)
   }
 }
 
+// Abre el modal para registrar la devolución
 function abrirDevolucion(solicitud) {
   solicitudSeleccionada.value = solicitud
   formDevolucion.value = { observaciones: '', conNovedad: false, fecha_devolucion: '' }
   modalDevolucionAbierto.value = true
 }
 
+// Registra la devolución de un equipo
 async function confirmarDevolucion() {
   if (!formDevolucion.value.observaciones.trim()) {
     toast.advertencia('Debes escribir una observación.')
@@ -112,13 +169,47 @@ async function confirmarDevolucion() {
 
   if (res.ok) {
     modalDevolucionAbierto.value = false
-    toast.exito(formDevolucion.value.conNovedad ? 'Devolución registrada con novedad' : 'Devolución registrada correctamente')
-    await refrescar()
+    toast.exito(formDevolucion.value.conNovedad ? 'Devolución registrada con novedad' : 'Devolución registrada')
+    await refrescar(paginaActual.value)
   } else {
     toast.error(res.error)
   }
 }
 
+// Abre el modal para editar los datos del solicitante
+function abrirEditar(solicitud) {
+  solicitudEditando.value = solicitud
+  formEdicion.value = {
+    nombre_completo: solicitud.nombre_completo || '',
+    cedula: solicitud.cedula || '',
+    telefono: solicitud.telefono || '',
+    pnf: solicitud.pnf || '',
+    tipo_solicitante: solicitud.tipo_solicitante || 'docente',
+  }
+  modalEditarAbierto.value = true
+}
+
+// Guarda los cambios en los datos del solicitante
+async function confirmarEdicion() {
+  if (!formEdicion.value.nombre_completo.trim()) {
+    toast.advertencia('El nombre es obligatorio.')
+    return
+  }
+
+  guardando.value = true
+  const res = await editarSolicitud(solicitudEditando.value.id, formEdicion.value)
+  guardando.value = false
+
+  if (res.ok) {
+    modalEditarAbierto.value = false
+    toast.exito('Solicitud actualizada correctamente')
+    await refrescar(paginaActual.value)
+  } else {
+    toast.error(res.error)
+  }
+}
+
+// Formatea una fecha ISO a un formato legible
 function formatearFecha(fechaISO) {
   if (!fechaISO) return '—'
   return new Date(fechaISO).toLocaleString('es-ES', {
@@ -127,6 +218,7 @@ function formatearFecha(fechaISO) {
   })
 }
 
+// Genera el PDF de planillas para las solicitudes en pantalla
 async function generarPlanillasDelDia() {
   const solicitudesParaPlanilla = solicitudes.value
   if (solicitudesParaPlanilla.length === 0) {
@@ -137,6 +229,7 @@ async function generarPlanillasDelDia() {
   toast.exito(`Se generó el reporte con ${solicitudesParaPlanilla.length} solicitudes.`)
 }
 
+// Cálculos para los gráficos
 const maxSemana = computed(() => Math.max(...estadisticas.value.porSemana.map(s => s.valor), 1))
 const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.valor), 1))
 </script>
@@ -147,7 +240,7 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold text-white">Solicitud de Equipos</h1>
-        <p class="text-sm text-[#b8c4c2] mt-1">Gestión de préstamos de videobeam y proyectores.</p>
+        <p class="text-sm text-[#b8c4c2] mt-1">Gestión de préstamos de videobeam, proyectores y cables.</p>
       </div>
       <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
         <BaseButton variant="secondary" @click="generarPlanillasDelDia" class="w-full sm:w-auto">Generar Planilla</BaseButton>
@@ -155,7 +248,7 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
       </div>
     </div>
 
-    <!-- Tarjetas de Estadísticas -->
+    <!-- Estadísticas -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-[#001e2b] border border-[#00684a]/50 rounded-2xl p-5">
         <p class="text-xs uppercase text-[#5c6c75] font-mono tracking-wider">Total solicitudes</p>
@@ -211,27 +304,27 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
     <!-- Filtros -->
     <div class="bg-[#001e2b] border border-[#00684a]/30 rounded-2xl p-4">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <select v-model="filtros.estado" class="bg-[#002b3b] border border-[#00684a]/50 rounded-full px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" @change="refrescar">
+        <select v-model="filtros.estado" class="bg-[#002b3b] border border-[#00684a]/50 rounded-full px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" @change="aplicarFiltros">
           <option value="">Todos los estados</option>
           <option value="prestado">Prestados</option>
           <option value="devuelto">Devueltos</option>
           <option value="con_novedad">Con novedad</option>
         </select>
-        <select v-model="filtros.tipo_solicitante" class="bg-[#002b3b] border border-[#00684a]/50 rounded-full px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" @change="refrescar">
+        <select v-model="filtros.tipo_solicitante" class="bg-[#002b3b] border border-[#00684a]/50 rounded-full px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" @change="aplicarFiltros">
           <option value="">Todos los solicitantes</option>
           <option value="docente">Docentes</option>
           <option value="estudiante">Estudiantes</option>
         </select>
-        <BaseButton variant="cancel" @click="filtros = { estado: '', tipo_solicitante: '' }; refrescar()" class="w-full">Limpiar filtros</BaseButton>
+        <BaseButton variant="cancel" @click="filtros = { estado: '', tipo_solicitante: '' }; aplicarFiltros()" class="w-full">Limpiar filtros</BaseButton>
       </div>
     </div>
 
-    <!-- Tabla de Solicitudes -->
+    <!-- Tabla -->
     <div class="bg-[#001e2b] border border-[#00684a]/30 rounded-2xl overflow-hidden shadow-lg shadow-black/20">
       <div v-if="cargando" class="p-8 text-center text-[#b8c4c2] animate-pulse">Cargando solicitudes...</div>
 
       <div v-else-if="solicitudes.length > 0" class="overflow-x-auto">
-        <table class="w-full text-sm min-w-[900px]">
+        <table class="w-full text-sm min-w-[1000px]">
           <thead class="bg-[#002b3b] text-[#b8c4c2] text-left text-xs uppercase font-mono tracking-wider border-b border-[#00684a]/30">
             <tr>
               <th class="px-6 py-4 font-bold">Equipo</th>
@@ -247,6 +340,7 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
               <td class="px-6 py-4">
                 <p class="font-mono text-xs font-bold text-[#00ed64]">{{ s.equipos?.codigo_bien_publico }}</p>
                 <p class="text-xs text-[#b8c4c2] mt-1">{{ s.equipos?.marca }} {{ s.equipos?.modelo }}</p>
+                <p class="text-xs text-[#5c6c75]">{{ s.equipos?.categorias?.nombre }}</p>
               </td>
               <td class="px-6 py-4">
                 <p class="font-bold text-white">{{ s.nombre_completo }}</p>
@@ -266,9 +360,24 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
                 </span>
               </td>
               <td class="px-6 py-4 text-right">
-                <BaseButton v-if="s.estado === 'prestado' && auth.puedeEscribir" size="sm" variant="warning" @click="abrirDevolucion(s)">
-                  Devolución
-                </BaseButton>
+                <div class="inline-flex gap-2">
+                  <BaseButton 
+                    v-if="auth.puedeEscribir" 
+                    size="sm" 
+                    variant="secondary" 
+                    @click="abrirEditar(s)"
+                  >
+                    Editar
+                  </BaseButton>
+                  <BaseButton 
+                    v-if="s.estado === 'prestado' && auth.puedeEscribir" 
+                    size="sm" 
+                    variant="warning" 
+                    @click="abrirDevolucion(s)"
+                  >
+                    Devolución
+                  </BaseButton>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -276,9 +385,23 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
       </div>
 
       <div v-else class="p-8 text-center text-[#5c6c75]">No hay solicitudes registradas.</div>
+
+      <!-- Paginación -->
+      <div v-if="totalPaginas > 1" class="px-6 py-4 border-t border-[#00684a]/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-xs font-mono text-[#b8c4c2]">
+          Mostrando <span class="font-bold text-white">{{ (paginaActual - 1) * registrosPorPagina + 1 }}</span> 
+          a <span class="font-bold text-white">{{ Math.min(paginaActual * registrosPorPagina, totalSolicitudes) }}</span> 
+          de <span class="font-bold text-white">{{ totalSolicitudes }}</span> solicitudes
+        </p>
+        <div class="flex items-center gap-2">
+          <button :disabled="paginaActual === 1" class="px-4 py-1.5 rounded-full text-xs font-bold border" :class="paginaActual === 1 ? 'bg-[#5c6c75]/20 text-[#5c6c75] border-[#5c6c75]/30 cursor-not-allowed' : 'bg-transparent text-white border-[#5c6c75] hover:border-[#00ed64] hover:text-[#00ed64]'" @click="cambiarPagina(paginaActual - 1)">Anterior</button>
+          <span class="text-xs font-mono font-bold text-[#00ed64] px-2">Página {{ paginaActual }} de {{ totalPaginas }}</span>
+          <button :disabled="paginaActual === totalPaginas" class="px-4 py-1.5 rounded-full text-xs font-bold border" :class="paginaActual === totalPaginas ? 'bg-[#5c6c75]/20 text-[#5c6c75] border-[#5c6c75]/30 cursor-not-allowed' : 'bg-transparent text-white border-[#5c6c75] hover:border-[#00ed64] hover:text-[#00ed64]'" @click="cambiarPagina(paginaActual + 1)">Siguiente</button>
+        </div>
+      </div>
     </div>
 
-    <!-- MODAL: Nueva Solicitud -->
+    <!-- Modal: Nueva Solicitud -->
     <BaseModal :open="modalAbierto" title="Nueva Solicitud de Equipo" size="lg" @close="modalAbierto = false">
       <form class="space-y-5" @submit.prevent="onGuardar">
         
@@ -332,7 +455,8 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
           </div>
         </div>
 
-        <div class="bg-[#002b3b] rounded-xl p-4 border border-[#00684a]/30">
+        <!-- Implementos: se ocultan si el equipo es de la categoría "Cables" -->
+        <div v-if="!esCableSeleccionado" class="bg-[#002b3b] rounded-xl p-4 border border-[#00684a]/30">
           <p class="text-sm font-bold text-white mb-3">Implementos entregados</p>
           <div class="grid grid-cols-2 gap-2">
             <label class="flex items-center gap-2 cursor-pointer text-[#b8c4c2] hover:text-white transition">
@@ -358,6 +482,11 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
           </div>
         </div>
 
+        <div v-else class="bg-[#00ed64]/5 border border-[#00ed64]/30 rounded-xl p-4">
+          <p class="text-sm font-bold text-[#00ed64]">Este equipo es un cable/extensión.</p>
+          <p class="text-xs text-[#b8c4c2] mt-1">No aplican implementos adicionales.</p>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-bold text-[#b8c4c2] mb-1">Fecha de Solicitud *</label>
@@ -376,7 +505,58 @@ const maxMes = computed(() => Math.max(...estadisticas.value.porMes.map(m => m.v
       </form>
     </BaseModal>
 
-    <!-- MODAL: Devolución -->
+    <!-- Modal: Editar Solicitud -->
+    <BaseModal :open="modalEditarAbierto" title="Editar Datos del Solicitante" size="md" @close="modalEditarAbierto = false">
+      <form class="space-y-4" @submit.prevent="confirmarEdicion">
+        
+        <div>
+          <label class="block text-sm font-bold text-[#b8c4c2] mb-1">Nombre completo *</label>
+          <input v-model="formEdicion.nombre_completo" required class="w-full bg-[#002b3b] border border-[#00684a]/50 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-[#b8c4c2] mb-1">Cédula</label>
+            <input v-model="formEdicion.cedula" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="8" class="w-full bg-[#002b3b] border border-[#00684a]/50 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" @input="formEdicion.cedula = formEdicion.cedula.replace(/[^0-9]/g, '')" />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-[#b8c4c2] mb-1">Teléfono</label>
+            <input v-model="formEdicion.telefono" type="tel" class="w-full bg-[#002b3b] border border-[#00684a]/50 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50" />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-bold text-[#b8c4c2] mb-1">PNF de Adscripción</label>
+            <select v-model="formEdicion.pnf" class="w-full bg-[#002b3b] border border-[#00684a]/50 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-[#00ed64]/50">
+              <option value="">— Seleccionar PNF —</option>
+              <option value="INFORMÁTICA">INFORMÁTICA</option>
+              <option value="CONTADURÍA PÚBLICA">CONTADURÍA PÚBLICA</option>
+              <option value="MEDICINA VETERINARIA">MEDICINA VETERINARIA</option>
+              <option value="ADMINISTRACIÓN">ADMINISTRACIÓN</option>
+              <option value="AGROALIMENTACIÓN">AGROALIMENTACIÓN</option>
+            </select>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-bold text-[#b8c4c2] mb-2">Tipo de Solicitante *</label>
+            <div class="flex gap-4">
+              <label class="flex items-center gap-2 cursor-pointer text-white">
+                <input type="radio" v-model="formEdicion.tipo_solicitante" value="docente" class="w-4 h-4 text-[#00ed64] bg-[#002b3b] border-[#00684a]" />
+                <span class="text-sm font-medium">Docente</span>
+              </label>
+              <label class="flex items-center gap-2 cursor-pointer text-white">
+                <input type="radio" v-model="formEdicion.tipo_solicitante" value="estudiante" class="w-4 h-4 text-[#00ed64] bg-[#002b3b] border-[#00684a]" />
+                <span class="text-sm font-medium">Estudiante</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <BaseButton variant="cancel" @click="modalEditarAbierto = false">Cancelar</BaseButton>
+          <BaseButton type="submit" variant="primary" :loading="guardando">Guardar cambios</BaseButton>
+        </div>
+      </form>
+    </BaseModal>
+
+    <!-- Modal: Devolución -->
     <BaseModal :open="modalDevolucionAbierto" title="Registrar Devolución" size="md" @close="modalDevolucionAbierto = false">
       <form class="space-y-4" @submit.prevent="confirmarDevolucion">
         <div class="bg-[#002b3b] border border-[#00684a]/30 rounded-xl p-4 text-sm">

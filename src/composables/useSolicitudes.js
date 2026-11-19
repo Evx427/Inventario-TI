@@ -4,6 +4,7 @@ import { registrarAuditoria } from './useAudit'
 
 export function useSolicitudes() {
   const solicitudes = ref([])
+  const totalSolicitudes = ref(0) 
   const cargando = ref(false)
   const error = ref('')
   const estadisticas = ref({
@@ -15,21 +16,29 @@ export function useSolicitudes() {
     porMes: [],
   })
 
-  async function listar(filtros = {}) {
+  async function listar(filtros = {}, pagina = 1) {
     cargando.value = true
     error.value = ''
+
+    // Paginación
+    const porPagina = 10
+    const desde = (pagina - 1) * porPagina
+    const hasta = desde + porPagina - 1
+
     try {
       let query = supabase
         .from('solicitudes')
-        .select(`*, equipos(codigo_bien_publico, marca, modelo)`)
+        .select(`*, equipos(codigo_bien_publico, marca, modelo, categoria_id, categorias(nombre))`, { count: 'exact' })
         .order('fecha_solicitud', { ascending: false })
 
       if (filtros.estado) query = query.eq('estado', filtros.estado)
       if (filtros.tipo_solicitante) query = query.eq('tipo_solicitante', filtros.tipo_solicitante)
 
-      const { data, error: err } = await query
+      const { data, error: err, count } = await query.range(desde, hasta)
       if (err) throw err
+      
       solicitudes.value = data || []
+      totalSolicitudes.value = count || 0
       calcularEstadisticas()
       return { ok: true, data: solicitudes.value }
     } catch (err) {
@@ -69,34 +78,58 @@ export function useSolicitudes() {
     }
   }
 
- async function registrarDevolucion(id, observaciones, conNovedad = false, fechaDevolucion = null) {
-  try {
-    const updateData = {
-      estado: conNovedad ? 'con_novedad' : 'devuelto',
-      observaciones,
-      fecha_devolucion: fechaDevolucion ? new Date(fechaDevolucion).toISOString() : new Date().toISOString(),
+  // Editar datos del solicitante
+  async function editarSolicitud(id, datos) {
+    try {
+      const { error: err } = await supabase
+        .from('solicitudes')
+        .update(datos)
+        .eq('id', id)
+
+      if (err) throw err
+
+      await registrarAuditoria({
+        accion: 'UPDATE_SOLICITUD',
+        tabla: 'solicitudes',
+        registroId: id,
+        resultado: 'exito',
+        metadata: { cambios: datos }
+      })
+
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: err.message }
     }
-
-    const { error: err } = await supabase
-      .from('solicitudes')
-      .update(updateData)
-      .eq('id', id)
-
-    if (err) throw err
-
-    await registrarAuditoria({
-      accion: conNovedad ? 'DEVOLUCION_CON_NOVEDAD' : 'DEVOLUCION_EQUIPO',
-      tabla: 'solicitudes',
-      registroId: id,
-      resultado: 'exito',
-      metadata: { observaciones },
-    })
-
-    return { ok: true }
-  } catch (err) {
-    return { ok: false, error: err.message }
   }
-}
+
+  async function registrarDevolucion(id, observaciones, conNovedad = false, fechaDevolucion = null) {
+    try {
+      const updateData = {
+        estado: conNovedad ? 'con_novedad' : 'devuelto',
+        observaciones,
+        fecha_devolucion: fechaDevolucion ? new Date(fechaDevolucion).toISOString() : new Date().toISOString(),
+      }
+
+      const { error: err } = await supabase
+        .from('solicitudes')
+        .update(updateData)
+        .eq('id', id)
+
+      if (err) throw err
+
+      await registrarAuditoria({
+        accion: conNovedad ? 'DEVOLUCION_CON_NOVEDAD' : 'DEVOLUCION_EQUIPO',
+        tabla: 'solicitudes',
+        registroId: id,
+        resultado: 'exito',
+        metadata: { observaciones },
+      })
+
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: err.message }
+    }
+  }
 
   function calcularEstadisticas() {
     // Totales
@@ -151,5 +184,15 @@ export function useSolicitudes() {
     return Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7)
   }
 
-  return { solicitudes, cargando, error, estadisticas, listar, crear, registrarDevolucion }
+  return { 
+    solicitudes, 
+    totalSolicitudes, 
+    cargando, 
+    error, 
+    estadisticas, 
+    listar, 
+    crear, 
+    registrarDevolucion,
+    editarSolicitud 
+  }
 }
